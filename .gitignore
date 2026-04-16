@@ -35,6 +35,8 @@ dist-ssr
 SUMMARY.md
 example_prompts.md
 debug_prompt.md
+ROLE.md
+progress.md
 
 # Misc
 .vite
