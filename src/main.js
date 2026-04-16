@@ -1,25 +1,39 @@
-import Phaser from 'phaser';
-import BootScene from './scenes/BootScene.js';
-import MenuScene from './scenes/MenuScene.js';
-import LevelScene from './scenes/LevelScene.js';
+import * as Phaser from 'phaser';
+import GameScene from './scenes/GameScene.js';
 
 const config = {
   type: Phaser.AUTO,
-  parent: 'app',
   width: 800,
   height: 600,
-  backgroundColor: '#101820',
+  backgroundColor: '#111',
   physics: {
     default: 'arcade',
     arcade: {
-      debug: false,
-    },
+      debug: false
+    }
   },
-  scene: [BootScene, MenuScene, LevelScene],
-  scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-  },
+  scene: [GameScene]
 };
 
-new Phaser.Game(config);
+
+let game = null;
+
+function startGame() {
+  if (!game) {
+    game = new Phaser.Game(config);
+  } else {
+    game.scene.resume('GameScene');
+  }
+}
+
+function stopGame() {
+  if (game) {
+    game.scene.pause('GameScene');
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('startBtn').onclick = startGame;
+  document.getElementById('stopBtn').onclick = stopGame;
+  startGame(); // auto-start on load
+});
