@@ -76,10 +76,22 @@ export default class WaveSystem {
     const data = getEnemyData(type);
     const { x, y } = this.getSpawnPosition();
 
-    const enemy = this.enemies.create(x, y, null);
+    // Map enemy type to sprite texture
+    const textureMap = {
+      drone: 'enemy_drone',
+      dasher: 'enemy_dasher',
+      shielder: 'enemy_shielder',
+      swarm: 'enemy_swarm',
+      sentinel: 'boss_sentinel',
+      titan: 'boss_titan'
+    };
+    const texture = textureMap[type] || 'enemy_drone';
+
+    const enemy = this.enemies.create(x, y, texture);
     if (!enemy) return;
 
     enemy.setCircle(data.radius);
+    enemy.setDepth(4);
     enemy.enemyType = type;
     enemy.enemyData = data;
     enemy.hp = data.hp;
