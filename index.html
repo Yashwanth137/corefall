@@ -2,18 +2,31 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
-	<title>Minimal Top-Down Shooter</title>
+	<title>Corefall — Cyborg Rebuild</title>
+	<meta name="description" content="A top-down shooter where you rebuild a damaged cyborg core through modular upgrades across 10 levels.">
 	<meta name="viewport" content="width=800, initial-scale=1.0">
+	<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 	<style>
-		body { background: #222; margin: 0; overflow: hidden; }
-		canvas { display: block; margin: 0 auto; background: #111; }
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+		html, body {
+			background: #060a14;
+			overflow: hidden;
+			width: 100%;
+			height: 100%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+		canvas {
+			display: block;
+			image-rendering: pixelated;
+		}
 	</style>
 </head>
 <body>
-	<div style="text-align:center;margin-top:12px;">
-		<button id="startBtn">Start</button>
-		<button id="stopBtn">Stop</button>
-	</div>
 	<script type="module" src="src/main.js"></script>
 </body>
 </html>
