@@ -1,4 +1,10 @@
-import Phaser from 'phaser';
+/**
+ * MenuScene.js
+ * Title screen with animated cyberpunk aesthetic.
+ */
+
+import * as Phaser from 'phaser';
+import gameState from '../managers/GameState.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -8,24 +14,169 @@ export default class MenuScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
 
-    this.add
-      .text(width / 2, height / 2 - 24, 'Corefall', {
-        fontFamily: 'Arial',
-        fontSize: '40px',
-        color: '#f5f7ff',
-      })
-      .setOrigin(0.5);
+    // Ensure fresh state
+    gameState.reset();
 
-    this.add
-      .text(width / 2, height / 2 + 28, 'Click anywhere to start', {
-        fontFamily: 'Arial',
-        fontSize: '20px',
-        color: '#9fb3c8',
-      })
-      .setOrigin(0.5);
+    // Background
+    this.add.rectangle(width / 2, height / 2, width, height, 0x060a14);
 
-    this.input.once('pointerdown', () => {
-      this.scene.start('LevelScene');
+    // Grid
+    const grid = this.add.graphics();
+    grid.lineStyle(1, 0x00ffcc, 0.04);
+    for (let x = 0; x <= width; x += 40) {
+      grid.moveTo(x, 0);
+      grid.lineTo(x, height);
+    }
+    for (let y = 0; y <= height; y += 40) {
+      grid.moveTo(0, y);
+      grid.lineTo(width, y);
+    }
+    grid.strokePath();
+
+    // Animated background particles
+    this.gfx = this.add.graphics();
+    this.particles = [];
+    for (let i = 0; i < 30; i++) {
+      this.particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 20,
+        vy: (Math.random() - 0.5) * 20,
+        size: 1 + Math.random() * 2,
+        alpha: 0.1 + Math.random() * 0.3
+      });
+    }
+
+    // Central core visual
+    this.coreGfx = this.add.graphics().setDepth(5);
+
+    // Title
+    const title = this.add.text(width / 2, 160, 'COREFALL', {
+      fontFamily: '"Orbitron", "Courier New", monospace',
+      fontSize: '48px',
+      fontStyle: 'bold',
+      color: '#00ffcc',
+      stroke: '#002211',
+      strokeThickness: 6
+    }).setOrigin(0.5).setDepth(10);
+
+    // Subtitle
+    this.add.text(width / 2, 210, 'REBUILD. EVOLVE. SURVIVE.', {
+      fontFamily: '"Orbitron", "Courier New", monospace',
+      fontSize: '13px',
+      color: '#446655',
+      letterSpacing: 4
+    }).setOrigin(0.5).setDepth(10);
+
+    // Tagline
+    this.add.text(width / 2, 240, 'A damaged cyborg core fights to reconstruct its body', {
+      fontFamily: '"Courier New", monospace',
+      fontSize: '11px',
+      color: '#334444',
+      fontStyle: 'italic'
+    }).setOrigin(0.5).setDepth(10);
+
+    // Start button
+    const btnY = 420;
+    const btnBg = this.add.rectangle(width / 2, btnY, 240, 50, 0x0a1a14).setDepth(10);
+    btnBg.setStrokeStyle(2, 0x00ffcc, 0.5);
+    btnBg.setInteractive({ useHandCursor: true });
+
+    const btnText = this.add.text(width / 2, btnY, '[ INITIALIZE ]', {
+      fontFamily: '"Orbitron", "Courier New", monospace',
+      fontSize: '18px',
+      fontStyle: 'bold',
+      color: '#00ffcc'
+    }).setOrigin(0.5).setDepth(10);
+
+    // Button pulse
+    this.tweens.add({
+      targets: btnText,
+      alpha: 0.6,
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
     });
+
+    btnBg.on('pointerover', () => {
+      btnBg.setStrokeStyle(2, 0x00ffcc, 1);
+      btnBg.setFillStyle(0x0a2a1e, 1);
+      btnText.setAlpha(1);
+    });
+    btnBg.on('pointerout', () => {
+      btnBg.setStrokeStyle(2, 0x00ffcc, 0.5);
+      btnBg.setFillStyle(0x0a1a14, 1);
+    });
+    btnBg.on('pointerdown', () => {
+      this.cameras.main.fadeOut(400, 0, 0, 0);
+      this.time.delayedCall(400, () => {
+        this.scene.start('GameScene');
+      });
+    });
+
+    // Controls hint
+    this.add.text(width / 2, height - 50, 'WASD Move  •  Mouse Aim  •  Click Shoot  •  Space Dash', {
+      fontFamily: '"Courier New", monospace',
+      fontSize: '10px',
+      color: '#223333'
+    }).setOrigin(0.5).setDepth(10);
+
+    // Version
+    this.add.text(width - 10, height - 10, 'v0.1', {
+      fontFamily: 'monospace',
+      fontSize: '9px',
+      color: '#1a2222'
+    }).setOrigin(1, 1).setDepth(10);
+
+    this.cameras.main.fadeIn(500, 0, 0, 0);
+    this.elapsed = 0;
+  }
+
+  update(time, delta) {
+    this.elapsed += delta;
+    const t = this.elapsed;
+    const cx = 400, cy = 320;
+
+    // Animate particles
+    this.gfx.clear();
+    this.particles.forEach(p => {
+      p.x += p.vx * (delta / 1000);
+      p.y += p.vy * (delta / 1000);
+      if (p.x < 0) p.x = 800;
+      if (p.x > 800) p.x = 0;
+      if (p.y < 0) p.y = 600;
+      if (p.y > 600) p.y = 0;
+      this.gfx.fillStyle(0x00ffcc, p.alpha);
+      this.gfx.fillCircle(p.x, p.y, p.size);
+    });
+
+    // Animate core
+    this.coreGfx.clear();
+    const pulse = 18 + Math.sin(t * 0.003) * 4;
+
+    // Outer glow
+    this.coreGfx.fillStyle(0x00ffcc, 0.06);
+    this.coreGfx.fillCircle(cx, cy, pulse + 20);
+    this.coreGfx.fillStyle(0x00ffcc, 0.04);
+    this.coreGfx.fillCircle(cx, cy, pulse + 35);
+
+    // Core
+    this.coreGfx.fillStyle(0x00ffcc, 0.8);
+    this.coreGfx.fillCircle(cx, cy, 10);
+    this.coreGfx.fillStyle(0xffffff, 0.5);
+    this.coreGfx.fillCircle(cx, cy, 4);
+
+    // Ring
+    this.coreGfx.lineStyle(1, 0x00ffcc, 0.3);
+    this.coreGfx.strokeCircle(cx, cy, pulse);
+
+    // Orbiting dots
+    for (let i = 0; i < 3; i++) {
+      const angle = t * 0.002 + (i * Math.PI * 2 / 3);
+      const r = pulse + 8;
+      this.coreGfx.fillStyle(0x00ffcc, 0.4);
+      this.coreGfx.fillCircle(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r, 2);
+    }
   }
 }

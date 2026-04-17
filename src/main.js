@@ -1,39 +1,27 @@
+/**
+ * main.js
+ * Phaser game bootstrap — registers all scenes.
+ */
+
 import * as Phaser from 'phaser';
+import MenuScene from './scenes/MenuScene.js';
 import GameScene from './scenes/GameScene.js';
+import UpgradeScene from './scenes/UpgradeScene.js';
+import GameOverScene from './scenes/GameOverScene.js';
+import VictoryScene from './scenes/VictoryScene.js';
 
 const config = {
   type: Phaser.AUTO,
   width: 800,
   height: 600,
-  backgroundColor: '#111',
+  backgroundColor: '#060a14',
   physics: {
     default: 'arcade',
     arcade: {
       debug: false
     }
   },
-  scene: [GameScene]
+  scene: [MenuScene, GameScene, UpgradeScene, GameOverScene, VictoryScene]
 };
 
-
-let game = null;
-
-function startGame() {
-  if (!game) {
-    game = new Phaser.Game(config);
-  } else {
-    game.scene.resume('GameScene');
-  }
-}
-
-function stopGame() {
-  if (game) {
-    game.scene.pause('GameScene');
-  }
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('startBtn').onclick = startGame;
-  document.getElementById('stopBtn').onclick = stopGame;
-  startGame(); // auto-start on load
-});
+const game = new Phaser.Game(config);
