@@ -1,9 +1,11 @@
 /**
  * main.js
  * Phaser game bootstrap — registers all scenes.
+ * BootScene generates textures, then MenuScene → GameScene → UpgradeScene loop.
  */
 
 import * as Phaser from 'phaser';
+import BootScene from './scenes/BootScene.js';
 import MenuScene from './scenes/MenuScene.js';
 import GameScene from './scenes/GameScene.js';
 import UpgradeScene from './scenes/UpgradeScene.js';
@@ -21,7 +23,7 @@ const config = {
       debug: false
     }
   },
-  scene: [MenuScene, GameScene, UpgradeScene, GameOverScene, VictoryScene]
+  scene: [BootScene, MenuScene, GameScene, UpgradeScene, GameOverScene, VictoryScene]
 };
 
 const game = new Phaser.Game(config);
