@@ -4,73 +4,67 @@
  */
 
 export const LEVEL_CONFIG = [
-  // Level 1: Tutorial — basic drones
   {
     level: 1,
     name: 'Awakening',
     subtitle: 'The core stirs...',
     waves: [
-      { enemyType: 'scrap_fiend', count: 5, delay: 1200 },
-      { enemyType: 'drone', count: 7, delay: 1000 }
+      { enemyType: 'scrap_fiend', count: 6, delay: 1200 },
+      { enemyType: 'drone', count: 5, delay: 1000 }
     ],
     boss: null,
     arenaColor: 0x0a0e1a
   },
-  // Level 2: More drones, faster
   {
     level: 2,
     name: 'First Steps',
-    subtitle: 'Legs acquired',
+    subtitle: 'Restricted Paths',
     waves: [
       { enemyType: 'drone', count: 8, delay: 1000 },
-      { enemyType: 'drone', count: 10, delay: 800 }
+      { enemyType: 'scrap_fiend', count: 10, delay: 800 }
     ],
     boss: null,
     arenaColor: 0x0c1220
   },
-  // Level 3: Introduce dashers
   {
     level: 3,
     name: 'Predators',
-    subtitle: 'They learn to charge',
+    subtitle: 'They learn to shoot',
     waves: [
       { enemyType: 'drone', count: 6, delay: 900 },
-      { enemyType: 'dasher', count: 4, delay: 1200 },
-      { enemyType: 'drone', count: 8, delay: 800 }
+      { enemyType: 'ranged', count: 4, delay: 1200 },
+      { enemyType: 'scrap_fiend', count: 8, delay: 800 }
     ],
     boss: null,
     arenaColor: 0x0e1428
   },
-  // Level 4: Dasher swarms
   {
     level: 4,
     name: 'Rush Hour',
     subtitle: 'Relentless assault',
     waves: [
       { enemyType: 'dasher', count: 6, delay: 1000 },
-      { enemyType: 'drone', count: 10, delay: 700 },
+      { enemyType: 'ranged', count: 5, delay: 700 },
       { enemyType: 'dasher', count: 8, delay: 900 }
     ],
     boss: null,
     arenaColor: 0x10182e
   },
-  // Level 5: Mini-boss — Sentinel
   {
     level: 5,
     name: 'The Sentinel',
     subtitle: 'A guardian blocks the path',
     waves: [
-      { enemyType: 'drone', count: 8, delay: 800 },
-      { enemyType: 'dasher', count: 5, delay: 900 }
+      { enemyType: 'scrap_fiend', count: 8, delay: 800 },
+      { enemyType: 'ranged', count: 5, delay: 900 }
     ],
-    boss: { type: 'sentinel', hp: 30, speed: 60 },
+    boss: { type: 'sentinel', hp: 35, speed: 60 },
     arenaColor: 0x141c34
   },
-  // Level 6: Introduce shielders
   {
     level: 6,
-    name: 'Iron Wall',
-    subtitle: 'Shields up',
+    name: 'Diagonal Shift',
+    subtitle: 'Grid expansion acquired',
     waves: [
       { enemyType: 'shielder', count: 4, delay: 1400 },
       { enemyType: 'drone', count: 10, delay: 700 },
@@ -79,7 +73,6 @@ export const LEVEL_CONFIG = [
     boss: null,
     arenaColor: 0x161e38
   },
-  // Level 7: Mixed assault
   {
     level: 7,
     name: 'Convergence',
@@ -87,13 +80,12 @@ export const LEVEL_CONFIG = [
     waves: [
       { enemyType: 'shielder', count: 5, delay: 1200 },
       { enemyType: 'dasher', count: 8, delay: 700 },
-      { enemyType: 'drone', count: 12, delay: 600 },
+      { enemyType: 'ranged', count: 8, delay: 600 },
       { enemyType: 'shielder', count: 3, delay: 1000 }
     ],
     boss: null,
     arenaColor: 0x18203c
   },
-  // Level 8: Introduce swarm type
   {
     level: 8,
     name: 'The Swarm',
@@ -107,7 +99,6 @@ export const LEVEL_CONFIG = [
     boss: null,
     arenaColor: 0x1a2240
   },
-  // Level 9: Gauntlet
   {
     level: 9,
     name: 'Gauntlet',
@@ -116,22 +107,21 @@ export const LEVEL_CONFIG = [
       { enemyType: 'dasher', count: 10, delay: 600 },
       { enemyType: 'shielder', count: 6, delay: 800 },
       { enemyType: 'swarm', count: 25, delay: 250 },
-      { enemyType: 'drone', count: 15, delay: 500 }
+      { enemyType: 'ranged', count: 15, delay: 500 }
     ],
     boss: null,
     arenaColor: 0x1c2444
   },
-  // Level 10: Final Boss — Titan
   {
     level: 10,
     name: 'TITAN',
     subtitle: 'The machine god awaits',
     waves: [
-      { enemyType: 'drone', count: 8, delay: 600 },
+      { enemyType: 'ranged', count: 8, delay: 600 },
       { enemyType: 'dasher', count: 6, delay: 700 },
       { enemyType: 'shielder', count: 4, delay: 900 }
     ],
-    boss: { type: 'titan', hp: 60, speed: 40 },
+    boss: { type: 'titan', hp: 75, speed: 40 },
     arenaColor: 0x200020
   }
 ];
