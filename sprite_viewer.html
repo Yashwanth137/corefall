@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kenney Sprite Viewer</title>
+  <style>
+    body { background: #222; color: #fff; font-family: monospace; margin: 20px; }
+    canvas { image-rendering: pixelated; border: 1px solid #555; }
+    #info { margin: 10px 0; font-size: 14px; }
+    #grid { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 20px; }
+    .tile { 
+      width: 48px; height: 48px; 
+      image-rendering: pixelated; 
+      cursor: pointer; 
+      border: 2px solid transparent;
+      position: relative;
+    }
+    .tile:hover { border-color: #0ff; }
+    .tile-label {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,0.8); color: #0ff;
+      font-size: 9px; text-align: center; padding: 1px;
+    }
+    h2 { color: #0ff; }
+    #debug { background: #000; color: #0f0; padding: 10px; font-family: monospace; white-space: pre-wrap; margin-top: 20px; border: 1px solid #0f0; height: 150px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h2>Kenney Sprite Viewer (Debug Mode)</h2>
+  <div id="info">Waiting for image to load...</div>
+  <div id="grid"></div>
+  <div id="debug"></div>
+
+  <script>
+    const debugDiv = document.getElementById('debug');
+    function log(msg) { debugDiv.innerHTML += msg + '<br>'; }
+    
+    window.onerror = function(msg, url, line) { log('WINDOW ERROR: ' + msg); };
+    
+    log('Script started. Attempting to load image...');
+    
+    const img = new Image();
+    img.crossOrigin = "Anonymous"; // Just in case
+    
+    img.onload = () => {
+      log('✅ Image Loaded successfully!');
+      log(`Image size: ${img.width}x${img.height}`);
+      
+      const TILE = 16;
+      const MARGIN = 1;
+      const STEP = TILE + MARGIN;
+      
+      const cols = Math.floor((img.width + MARGIN) / STEP);
+      const rows = Math.floor((img.height + MARGIN) / STEP);
+      const total = cols * rows;
+      
+      document.getElementById('info').innerHTML = `Grid: ${cols} cols × ${rows} rows | Total frames: ${total}`;
+      const grid = document.getElementById('grid');
+      
+      for (let i = 0; i < total; i++) {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = TILE;
+        canvas.height = TILE;
+        canvas.className = 'tile';
+        canvas.title = `Frame ${i}`;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        
+        try {
+          ctx.drawImage(img, col * STEP, row * STEP, TILE, TILE, 0, 0, TILE, TILE);
+          
+          let empty = true;
+          try {
+            const data = ctx.getImageData(0, 0, TILE, TILE).data;
+            for (let p = 3; p < data.length; p += 4) {
+              if (data[p] > 0) { empty = false; break; }
+            }
+          } catch(e) {
+            empty = false; // CORS error => just show it anyway it might be valid.
+          }
+          
+          if (!empty) {
+            const wrapper = document.createElement('div');
+            wrapper.style.position = 'relative';
+            wrapper.style.display = 'inline-block';
+            
+            const label = document.createElement('div');
+            label.className = 'tile-label';
+            label.textContent = i;
+            
+            wrapper.appendChild(canvas);
+            wrapper.appendChild(label);
+            grid.appendChild(wrapper);
+          }
+        } catch(e) {
+          log('❌ Render error on frame ' + i + ': ' + e.message);
+          break; // Stop loop on fatal canvas error
+        }
+      }
+      log('Render complete.');
+    };
+    
+    img.onerror = (e) => {
+      log('❌ ERROR: Image failed to load!');
+      log('Attempted path: ' + img.src);
+      document.getElementById('info').innerHTML = '<span style="color:red">Failed to load the spritesheet.</span>';
+    };
+    
+    // Some Vite environments serve public files at the root, or source files relative to them.
+    // Try Vite's explicit /@fs/ local path approach if standard relative fails, but let's try the direct relative path first since it usually works.
+    const path = '/src/assets/kenney_roguelike-characters/Spritesheet/roguelikeChar_transparent.png';
+    log('Setting image source to: ' + path);
+    img.src = path;
+  </script>
+</body>
+</html>

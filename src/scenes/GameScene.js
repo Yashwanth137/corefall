@@ -12,6 +12,7 @@ import WaveSystem from '../systems/WaveSystem.js';
 import TerrainSystem from '../systems/TerrainSystem.js';
 import HUD from '../ui/HUD.js';
 import { getLevelConfig } from '../data/LevelConfig.js';
+import Player from '../entities/Player.js';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -23,7 +24,8 @@ export default class GameScene extends Phaser.Scene {
 
     // --- Arena background ---
     const cfg = getLevelConfig(gameState.level);
-    this.add.rectangle(width / 2, height / 2, width, height, cfg.arenaColor);
+    this.cameras.main.setBackgroundColor(cfg.arenaColor);
+    // Removed old background rectangle since ISO ground covers it and it messes up cartesian scrolling
 
     // --- Terrain System ---
     this.terrainSystem = new TerrainSystem(this);
@@ -32,13 +34,9 @@ export default class GameScene extends Phaser.Scene {
     this.showLevelAnnouncement(cfg);
 
     // --- Player ---
-    this.player = this.physics.add.sprite(width / 2, height / 2, 'player_core');
-    this.player.setCircle(16, 8, 8);
-    this.player.setCollideWorldBounds(true);
-    this.player.aimAngle = 0;
-    this.player._invincible = false;
-    this.player._hitFlashTimer = 0;
-    this.player.setDepth(5);
+    const spawn = this.terrainSystem.spawnPoint || { x: width / 2, y: height / 2 };
+    this.player = new Player(this, spawn.x, spawn.y);
+    this.setupArenaBounds();
 
     // --- Physics groups ---
     this.bullets = this.physics.add.group({ runChildUpdate: false });
@@ -96,12 +94,11 @@ export default class GameScene extends Phaser.Scene {
       this.damageEnemy(enemy, damage);
     });
 
-    this.events.on('level-complete', () => {
+    this.events.once('level-complete', () => {
       this.time.delayedCall(1000, () => {
-        if (gameState.level >= 10) {
+        if (gameState.level > 10) {
           this.scene.start('VictoryScene');
         } else {
-          gameState.nextLevel();
           this.scene.start('UpgradeScene');
         }
       });
@@ -160,6 +157,7 @@ export default class GameScene extends Phaser.Scene {
 
     this.gameActive = true;
     this.hazardDamageCooldown = 0;
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanupScene, this);
   }
 
   showLevelAnnouncement(cfg) {
@@ -170,7 +168,7 @@ export default class GameScene extends Phaser.Scene {
       color: '#ffffff',
       stroke: '#000000',
       strokeThickness: 4
-    }).setOrigin(0.5).setDepth(200).setAlpha(0);
+    }).setOrigin(0.5).setDepth(200).setAlpha(0).setScrollFactor(0);
 
     const sub = this.add.text(400, 300, cfg.name, {
       fontFamily: '"Orbitron", "Courier New", monospace',
@@ -178,14 +176,14 @@ export default class GameScene extends Phaser.Scene {
       color: '#88aacc',
       stroke: '#000000',
       strokeThickness: 2
-    }).setOrigin(0.5).setDepth(200).setAlpha(0);
+    }).setOrigin(0.5).setDepth(200).setAlpha(0).setScrollFactor(0);
 
     const sub2 = this.add.text(400, 325, cfg.subtitle, {
       fontFamily: '"Orbitron", "Courier New", monospace',
       fontSize: '12px',
       color: '#556677',
       fontStyle: 'italic'
-    }).setOrigin(0.5).setDepth(200).setAlpha(0);
+    }).setOrigin(0.5).setDepth(200).setAlpha(0).setScrollFactor(0);
 
     this.tweens.add({
       targets: [title, sub, sub2],
@@ -217,7 +215,7 @@ export default class GameScene extends Phaser.Scene {
       color: '#ff2244',
       stroke: '#000000',
       strokeThickness: 4
-    }).setOrigin(0.5).setDepth(200).setAlpha(0);
+    }).setOrigin(0.5).setDepth(200).setAlpha(0).setScrollFactor(0);
 
     this.cameras.main.shake(500, 0.008);
 
@@ -301,6 +299,8 @@ export default class GameScene extends Phaser.Scene {
     this.cameras.main.shake(80, enemy.isBoss ? 0.015 : 0.003);
 
     const enemyRef = { score: enemy.score, isBoss: enemy.isBoss, enemyData: enemy.enemyData };
+    enemy.view?.destroy();
+    enemy.view = null;
     enemy.destroy();
 
     this.waveSystem.onEnemyKilled(enemyRef);
@@ -367,15 +367,12 @@ export default class GameScene extends Phaser.Scene {
       this.player._hitFlashTimer -= delta;
     }
 
-    this.player.setRotation(this.player.aimAngle || 0);
-    this.updatePlayerTexture();
-
     if (this.player._hitFlashTimer > 0) {
-      this.player.setTint(0xff4444);
+      this.player.applyColorTint(0xff4444);
     } else if (this.movementSystem.isDashing) {
-      this.player.setTint(0x88ffee);
+      this.player.applyColorTint(0x88ffee);
     } else {
-      this.player.clearTint();
+      this.player.clearColorTint();
     }
 
     this.hazardDamageCooldown -= delta;
@@ -388,8 +385,11 @@ export default class GameScene extends Phaser.Scene {
 
     this.enemyBullets.getChildren().forEach(b => {
       if (!b.active) return;
+      const bounds = this.terrainSystem.bounds;
+      const margin = 50;
       if (time - b.spawnTime > b.lifespan ||
-          b.x < -50 || b.x > 850 || b.y < -50 || b.y > 650) {
+          b.x < -margin || b.x > bounds.w + margin ||
+          b.y < -margin || b.y > bounds.h + margin) {
         b.destroy();
       }
     });
@@ -397,97 +397,100 @@ export default class GameScene extends Phaser.Scene {
     this.renderAll(time, delta);
   }
 
-  updatePlayerTexture() {
-    const arms = gameState.parts.arms;
-    let targetTexture = 'player_core';
-    if (arms === 'dual_blaster') targetTexture = 'player_dual';
-    else if (arms === 'shotgun') targetTexture = 'player_shotgun';
-    else if (arms === 'laser') targetTexture = 'player_laser';
-    else if (arms === 'missile') targetTexture = 'player_missile';
-    else if (arms === 'katana') targetTexture = 'player_katana';
-
-    if (this.player.texture.key !== targetTexture) {
-      this.player.setTexture(targetTexture);
-    }
+  setupArenaBounds() {
+    const bounds = this.terrainSystem.bounds;
+    this.physics.world.setBounds(0, 0, bounds.w, bounds.h);
+    
+    // Zoom out slightly for higher levels to see more
+    const zoom = Math.max(0.6, 1 - (gameState.level * 0.03));
+    this.cameras.main.setZoom(zoom);
+    this.cameras.main.setBounds(0, 0, bounds.w, bounds.h);
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
   }
 
   renderAll(time, delta) {
     this.gfx.clear();
 
-    // Dash trails
-    this.dashTrails = this.dashTrails.filter(t => {
+    // 1. Draw minimal terrain background geometry
+    this.terrainSystem.render(this.gfx);
+
+    // 2. Dash trails (long streak line for juice)
+    this.dashTrails = this.dashTrails.filter((t, i, arr) => {
       t.alpha -= 0.02;
       if (t.alpha <= 0) return false;
-      this.gfx.fillStyle(0x00ffcc, t.alpha * 0.5);
-      this.gfx.fillCircle(t.x, t.y, 12);
+      
+      this.gfx.lineStyle(2, 0x00ffcc, t.alpha);
+      this.gfx.beginPath();
+      this.gfx.moveTo(t.x, t.y);
+      if (arr[i+1]) {
+        this.gfx.lineTo(arr[i+1].x, arr[i+1].y);
+      } else {
+         this.gfx.lineTo(t.x + 1, t.y + 1);
+      }
+      this.gfx.strokePath();
       return true;
     });
 
-    // Player aura
-    this.renderPlayerAura(time);
+    // 3. Player Rendering
+    this.renderPlayer(time);
 
-    // Katana swing
-    if (this.katanaSwingVisual) {
-      const k = this.katanaSwingVisual;
-      k.timer -= delta;
-      const alpha = k.timer / 200;
-      this.gfx.lineStyle(3, 0xff00ff, alpha * 0.8);
-      this.gfx.beginPath();
-      this.gfx.arc(k.x, k.y, k.range, k.angle - k.arc / 2, k.angle + k.arc / 2);
-      this.gfx.strokePath();
-      this.gfx.lineStyle(6, 0xff88ff, alpha * 0.4);
-      this.gfx.beginPath();
-      this.gfx.arc(k.x, k.y, k.range * 0.6, k.angle - k.arc / 2, k.angle + k.arc / 2);
-      this.gfx.strokePath();
-      if (k.timer <= 0) this.katanaSwingVisual = null;
-    }
+    // 4. Enemy Rendering
+    this.enemies.getChildren().forEach(enemy => {
+      if (!enemy.active) return;
+      this.renderEnemy(enemy, time);
+    });
 
-    // Muzzle flash
+    // 5. Bullets Rendering
+    this.bullets.getChildren().forEach(bullet => {
+      if (!bullet.active) return;
+      const color = bullet.bulletColor || 0xffffff;
+      
+      this.gfx.lineStyle(bullet.pierce ? 3 : 2, color, 1);
+      this.gfx.strokeCircle(bullet.x, bullet.y, bullet.pierce ? 6 : 4);
+      
+      // small trail
+      this.gfx.lineStyle(1, color, 0.4);
+      this.gfx.beginPath();
+      this.gfx.moveTo(bullet.x, bullet.y);
+      this.gfx.lineTo(bullet.x - bullet.body.velocity.x * 0.03, bullet.y - bullet.body.velocity.y * 0.03);
+      this.gfx.strokePath();
+    });
+
+    // 6. Enemy bullets
+    this.enemyBullets.getChildren().forEach(b => {
+      if (!b.active) return;
+      this.gfx.lineStyle(2, b.bulletColor || 0xff4466, 1);
+      this.gfx.strokeCircle(b.x, b.y, 4);
+    });
+
+    // 7. Events (Muzzle flash expanding ring, katana swing)
     if (this.muzzleFlash) {
       const m = this.muzzleFlash;
       m.timer -= delta;
       const alpha = m.timer / 60;
-      this.gfx.fillStyle(0xffffcc, alpha * 0.8);
-      this.gfx.fillCircle(
-        m.x + Math.cos(m.angle) * 22,
-        m.y + Math.sin(m.angle) * 22,
-        4 + alpha * 4
-      );
+      const radius = 10 + (1 - alpha) * 15;
+      
+      const cartFlashX = m.x + Math.cos(m.angle) * 22;
+      const cartFlashY = m.y + Math.sin(m.angle) * 22;
+      
+      this.gfx.lineStyle(2, 0xffffcc, alpha * 0.8);
+      this.gfx.strokeCircle(cartFlashX, cartFlashY, radius);
       if (m.timer <= 0) this.muzzleFlash = null;
     }
 
-    // Bullets
-    this.bullets.getChildren().forEach(bullet => {
-      if (!bullet.active) return;
-      const color = bullet.bulletColor || 0xffffff;
-      this.gfx.fillStyle(color, 0.3);
-      this.gfx.fillCircle(
-        bullet.x - bullet.body.velocity.x * 0.02,
-        bullet.y - bullet.body.velocity.y * 0.02,
-        3
-      );
-      this.gfx.fillStyle(color, 1);
-      this.gfx.fillCircle(bullet.x, bullet.y, bullet.pierce ? 5 : 3);
-      this.gfx.fillStyle(color, 0.15);
-      this.gfx.fillCircle(bullet.x, bullet.y, bullet.pierce ? 10 : 6);
-    });
+    if (this.katanaSwingVisual) {
+      const k = this.katanaSwingVisual;
+      k.timer -= delta;
+      const alpha = k.timer / 200;
+      
+      this.gfx.lineStyle(2, 0xff00ff, alpha * 0.8);
+      this.gfx.beginPath();
+      this.gfx.arc(k.x, k.y, k.range, k.angle - k.arc / 2, k.angle + k.arc / 2);
+      this.gfx.strokePath();
+      if (k.timer <= 0) this.katanaSwingVisual = null;
+    }
 
-    // Enemy bullets
-    this.enemyBullets.getChildren().forEach(b => {
-      if (!b.active) return;
-      this.gfx.fillStyle(b.bulletColor || 0xff4466, 1);
-      this.gfx.fillCircle(b.x, b.y, 4);
-      this.gfx.fillStyle(b.bulletColor || 0xff4466, 0.2);
-      this.gfx.fillCircle(b.x, b.y, 8);
-    });
-
-    // Enemy effects
-    this.enemies.getChildren().forEach(enemy => {
-      if (!enemy.active) return;
-      this.renderEnemyEffects(enemy, time);
-    });
-
-    // Death particles
+    // 8. Hit Explosion Particles
     this.deathParticles = this.deathParticles.filter(p => {
       p.life -= delta;
       if (p.life <= 0) return false;
@@ -496,110 +499,177 @@ export default class GameScene extends Phaser.Scene {
       p.vx *= 0.95;
       p.vy *= 0.95;
       const alpha = p.life / p.maxLife;
-      this.gfx.fillStyle(p.color, alpha);
-      this.gfx.fillCircle(p.x, p.y, p.size * alpha);
+      
+      this.gfx.lineStyle(1, p.color, alpha);
+      this.gfx.beginPath();
+      this.gfx.moveTo(p.x, p.y);
+      this.gfx.lineTo(p.x + p.vx * 0.05, p.y + p.vy * 0.05);
+      this.gfx.strokePath();
       return true;
     });
 
-    // Damage numbers
+    // Damage numbers float up
     this.damageNumbers = this.damageNumbers.filter(d => {
       d.life -= delta;
       if (d.life <= 0) return false;
-      d.y -= 30 * (delta / 1000);
+      d.y -= 30 * (delta / 1000); 
       return true;
     });
     this.renderDamageNumbers();
   }
 
-  renderPlayerAura(time) {
+  renderPlayer(time) {
     const p = this.player;
-    const glowPulse = 0.12 + Math.sin(time * 0.003) * 0.05;
-    this.gfx.fillStyle(0x00ffcc, glowPulse);
-    this.gfx.fillCircle(p.x, p.y, 24);
+    const isHit = p._hitFlashTimer > 0;
+    const color = p.currentTint || 0x00ffcc;
+    
+    // Glitch effect on hit
+    let ox = 0, oy = 0;
+    if (isHit && Math.random() < 0.3) {
+      ox = (Math.random() - 0.5) * 10;
+      oy = (Math.random() - 0.5) * 10;
+    }
 
+    const px = p.x + ox;
+    const py = p.y + oy;
+
+    // Player base shape (Hexagon)
+    this.gfx.lineStyle(2, color, isHit ? 0.5 : 1);
+    this.drawPolygon(this.gfx, px, py, 6, 14, p.aimAngle);
+
+    // Inner core for shield/regen/reactor
     const core = gameState.parts.core;
     if (core === 'reactor') {
-      this.gfx.fillStyle(0xffff00, 0.15 + Math.sin(time * 0.006) * 0.08);
-      this.gfx.fillCircle(p.x, p.y, 20);
+      this.gfx.lineStyle(1, 0xffff00, 0.5 + Math.sin(time * 0.006) * 0.3);
+      this.gfx.strokeCircle(px, py, 6);
     } else if (core === 'shield' && gameState._shieldReady) {
       this.gfx.lineStyle(2, 0x4488ff, 0.4 + Math.sin(time * 0.004) * 0.2);
-      this.gfx.strokeCircle(p.x, p.y, 24);
-    } else if (core === 'regen') {
-      this.gfx.fillStyle(0x00ff44, 0.08 + Math.sin(time * 0.003) * 0.04);
-      this.gfx.fillCircle(p.x, p.y, 22);
-    } else if (core === 'overcharge' && this.combatSystem.overchargeActive) {
-      this.gfx.fillStyle(0xff00ff, 0.2 + Math.sin(time * 0.01) * 0.15);
-      this.gfx.fillCircle(p.x, p.y, 26);
-    } else if (core === 'berserker') {
-      const rage = 0.15 + Math.sin(time * 0.008) * 0.08;
-      this.gfx.fillStyle(0xff0044, rage);
-      this.gfx.fillCircle(p.x, p.y, 22);
-      this.gfx.lineStyle(2, 0xff2200, rage);
-      this.gfx.strokeCircle(p.x, p.y, 24 + Math.sin(time * 0.012) * 3);
+      this.gfx.strokeCircle(px, py, 24);
     }
 
-    const legs = gameState.parts.legs;
-    if (legs === 'jump_jets') {
-      const angle = p.aimAngle + Math.PI;
-      const jetSize = 5 + Math.sin(time * 0.02) * 3;
-      this.gfx.fillStyle(0xff8844, 0.5);
-      this.gfx.fillCircle(p.x + Math.cos(angle) * 18, p.y + Math.sin(angle) * 18, jetSize);
-    } else if (legs === 'hover') {
-      const hoverGlow = 0.2 + Math.sin(time * 0.004) * 0.1;
-      this.gfx.fillStyle(0x44ddff, hoverGlow);
-      this.gfx.fillCircle(p.x, p.y + 4, 20);
-    }
-
+    // Aim Line
     const angle = p.aimAngle || 0;
-    this.gfx.lineStyle(1, 0xffffff, 0.12);
-    this.gfx.lineBetween(
-      p.x + Math.cos(angle) * 28,
-      p.y + Math.sin(angle) * 28,
-      p.x + Math.cos(angle) * 44,
-      p.y + Math.sin(angle) * 44
-    );
+    const lineX1 = px + Math.cos(angle) * 16;
+    const lineY1 = py + Math.sin(angle) * 16;
+    const lineX2 = px + Math.cos(angle) * 40;
+    const lineY2 = py + Math.sin(angle) * 40;
+    this.gfx.lineStyle(1, 0xffffff, 0.2);
+    this.gfx.lineBetween(lineX1, lineY1, lineX2, lineY2);
   }
 
-  renderEnemyEffects(enemy, time) {
-    const data = enemy.enemyData || {};
-    const color = enemy.enemyColor || 0xff3333;
-    const glow = enemy.glowColor || color;
+  renderEnemy(enemy, time) {
+    const rData = enemy.renderData;
+    if (!rData) return;
 
-    if (enemy._hitFlash > 0) {
-      enemy._hitFlash -= 16;
-      enemy.setTint(0xffffff);
-    } else {
-      enemy.clearTint();
+    let isHit = enemy._hitFlash > 0;
+    if (isHit) enemy._hitFlash -= 16;
+
+    let color = isHit ? 0xffffff : rData.color;
+    let ox = 0, oy = 0;
+
+    // Cypress cyborg glitch when highly damaged or on specific levels
+    const isGlitchy = gameState.level >= 5 && (enemy.hp / enemy.maxHp < 0.4);
+    if ((isHit || isGlitchy) && Math.random() < 0.2) {
+      ox = (Math.random() - 0.5) * 12;
     }
 
-    this.gfx.fillStyle(glow, 0.1);
-    this.gfx.fillCircle(enemy.x, enemy.y, (data.radius || 10) + 4);
+    const ex = enemy.x + ox;
+    const ey = enemy.y + oy;
+    const size = rData.radius;
+    const thickness = rData.thick ? 3 : 2;
 
-    if (enemy.behavior === 'shielded' && enemy.facingAngle !== undefined) {
-      this.gfx.lineStyle(3, 0x88bbff, 0.6);
+    this.gfx.lineStyle(thickness, color, 1);
+
+    // Calculate facing string for rotation
+    const angle = enemy.behavior === 'shielded' && enemy.facingAngle !== undefined 
+      ? enemy.facingAngle 
+      : enemy.body.velocity ? Math.atan2(enemy.body.velocity.y, enemy.body.velocity.x) : 0;
+
+    switch (rData.shape) {
+      case 'triangle':
+        this.drawPolygon(this.gfx, ex, ey, 3, size + 2, angle);
+        break;
+      case 'arrow':
+        // Stretched triangle
+        this.gfx.beginPath();
+        this.gfx.moveTo(ex + Math.cos(angle)*size*1.5, ey + Math.sin(angle)*size*1.5);
+        this.gfx.lineTo(ex + Math.cos(angle + 2.5)*size, ey + Math.sin(angle + 2.5)*size);
+        this.gfx.lineTo(ex + Math.cos(angle - 2.5)*size, ey + Math.sin(angle - 2.5)*size);
+        this.gfx.closePath();
+        this.gfx.strokePath();
+        break;
+      case 'square':
+        this.drawPolygon(this.gfx, ex, ey, 4, size, angle + Math.PI/4); // Diamond/Square
+        break;
+      case 'jagged':
+        this.drawBrokenPolygon(this.gfx, ex, ey, 5, size, time * 0.005);
+        break;
+      case 'dots':
+        if (Math.random() > 0.1) {
+          this.gfx.strokeCircle(ex, ey, 3);
+          this.gfx.strokeCircle(ex + (Math.random()-0.5)*10, ey + (Math.random()-0.5)*10, 1);
+        }
+        break;
+      case 'hex_core':
+        this.drawPolygon(this.gfx, ex, ey, 6, size, time * 0.002);
+        this.drawPolygon(this.gfx, ex, ey, 3, size*0.5, -time * 0.004);
+        break;
+      case 'titan_core':
+        this.drawPolygon(this.gfx, ex, ey, 8, size, time * 0.001);
+        this.drawPolygon(this.gfx, ex, ey, 4, size*0.6, -time * 0.002);
+        this.gfx.strokeCircle(ex, ey, size*0.3);
+        break;
+      default:
+        this.gfx.strokeCircle(ex, ey, size);
+    }
+
+    // Boss HP bar (geometric)
+    if (enemy.isBoss) {
+      const hpPct = enemy.hp / enemy.maxHp;
+      this.gfx.lineStyle(1, 0x330000, 0.8);
+      this.gfx.strokeRect(ex - size, ey - size - 15, size*2, 4);
+      this.gfx.fillStyle(0xff2244, 0.9);
+      this.gfx.fillRect(ex - size, ey - size - 15, (size*2) * hpPct, 4);
+    }
+
+    // Dasher trail juice
+    if (enemy.behavior === 'dash_charge' && enemy.isDashing) {
+      this.gfx.lineStyle(1, color, 0.4);
       this.gfx.beginPath();
-      this.gfx.arc(enemy.x, enemy.y, (data.radius || 14) + 5,
-        enemy.facingAngle - enemy.shieldArc / 2,
-        enemy.facingAngle + enemy.shieldArc / 2);
+      this.gfx.moveTo(enemy.x, enemy.y);
+      this.gfx.lineTo(enemy.x - enemy.body.velocity.x * 0.05, enemy.y - enemy.body.velocity.y * 0.05);
       this.gfx.strokePath();
     }
 
-    if (enemy.isBoss) {
-      const r = data.radius || 24;
-      const hpPct = enemy.hp / enemy.maxHp;
-      this.gfx.fillStyle(0x330000, 0.8);
-      this.gfx.fillRect(enemy.x - r, enemy.y - r - 10, r * 2, 4);
-      this.gfx.fillStyle(0xff2244, 0.9);
-      this.gfx.fillRect(enemy.x - r, enemy.y - r - 10, r * 2 * hpPct, 4);
+    // Shield Arc wireframe
+    if (enemy.behavior === 'shielded' && enemy.facingAngle !== undefined) {
+      this.gfx.lineStyle(3, 0x88ccff, 0.8);
+      this.gfx.beginPath();
+      this.gfx.arc(ex, ey, size + 6, enemy.facingAngle - enemy.shieldArc/2, enemy.facingAngle + enemy.shieldArc/2);
+      this.gfx.strokePath();
     }
+  }
 
-    if (enemy.behavior === 'dash_charge' && enemy.isDashing) {
-      this.gfx.fillStyle(color, 0.2);
-      this.gfx.fillCircle(
-        enemy.x - enemy.body.velocity.x * 0.03,
-        enemy.y - enemy.body.velocity.y * 0.03,
-        (data.radius || 9) * 0.7
-      );
+  drawPolygon(gfx, x, y, sides, radius, rotation) {
+    gfx.beginPath();
+    for (let i = 0; i < sides; i++) {
+      const a = (i / sides) * Math.PI * 2 + rotation;
+      if (i === 0) gfx.moveTo(x + Math.cos(a)*radius, y + Math.sin(a)*radius);
+      else gfx.lineTo(x + Math.cos(a)*radius, y + Math.sin(a)*radius);
+    }
+    gfx.closePath();
+    gfx.strokePath();
+  }
+
+  drawBrokenPolygon(gfx, x, y, sides, radius, rotation) {
+    for (let i = 0; i < sides; i++) {
+      if (Math.random() < 0.15) continue; // broken segment glitch
+      const a1 = (i / sides) * Math.PI * 2 + rotation;
+      const a2 = ((i+1) / sides) * Math.PI * 2 + rotation;
+      gfx.beginPath();
+      gfx.moveTo(x + Math.cos(a1)*radius, y + Math.sin(a1)*radius);
+      gfx.lineTo(x + Math.cos(a2)*radius, y + Math.sin(a2)*radius);
+      gfx.strokePath();
     }
   }
 
@@ -630,5 +700,12 @@ export default class GameScene extends Phaser.Scene {
     this.damageNumbers.forEach(d => {
       if (d._text) d._text.destroy();
     });
+  }
+
+  cleanupScene() {
+    this.shutdown();
+    this.combatSystem?.destroy();
+    this.waveSystem?.destroy();
+    this.hud?.destroy();
   }
 }

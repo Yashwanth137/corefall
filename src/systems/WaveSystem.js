@@ -53,6 +53,7 @@ export default class WaveSystem {
     }
 
     this.currentWaveIndex = index;
+    gameState.wave = index + 1;
     this.waveActive = true;
     this.spawned = 0;
 
@@ -76,22 +77,23 @@ export default class WaveSystem {
     const data = getEnemyData(type);
     const { x, y } = this.getSpawnPosition();
 
-    // Map enemy type to sprite texture
-    const textureMap = {
-      drone: 'enemy_drone',
-      dasher: 'enemy_dasher',
-      shielder: 'enemy_shielder',
-      swarm: 'enemy_swarm',
-      sentinel: 'boss_sentinel',
-      titan: 'boss_titan'
-    };
-    const texture = textureMap[type] || 'enemy_drone';
-
-    const enemy = this.enemies.create(x, y, texture);
+    // Create an invisible Arcade physics ghost
+    const enemy = this.enemies.create(x, y, null);
     if (!enemy) return;
+    enemy.setVisible(false);
 
-    enemy.setCircle(data.radius);
-    enemy.setDepth(4);
+    // The physics body should match the visual size
+    enemy.setCircle(data.radius || 12);
+    enemy.setOffset(16 - (data.radius || 12), 16 - (data.radius || 12));
+
+    // Assign rendering configs directly onto enemy
+    enemy.renderData = {
+      shape: data.shape || 'triangle',
+      thick: data.thick || false,
+      color: data.color || 0xff0000,
+      radius: data.radius || 12
+    };
+
     enemy.enemyType = type;
     enemy.enemyData = data;
     enemy.hp = data.hp;
@@ -104,7 +106,6 @@ export default class WaveSystem {
     enemy.deathParticles = data.deathParticles;
     enemy.enemyColor = data.color;
     enemy.glowColor = data.glowColor;
-
     // Behavior-specific state
     if (data.behavior === 'dash_charge') {
       enemy.dashCooldownTimer = data.dashCooldown;
@@ -154,11 +155,17 @@ export default class WaveSystem {
     const side = Phaser.Math.Between(0, 3);
     let x, y;
     const margin = 30;
+    
+    // Dynamically fetch from terrain system if present, otherwise default
+    const b = (this.scene.terrainSystem && this.scene.terrainSystem.bounds) 
+        ? this.scene.terrainSystem.bounds 
+        : { w: 800, h: 600 };
+
     switch (side) {
-      case 0: x = -margin; y = Phaser.Math.Between(0, 600); break;
-      case 1: x = 800 + margin; y = Phaser.Math.Between(0, 600); break;
-      case 2: x = Phaser.Math.Between(0, 800); y = -margin; break;
-      case 3: x = Phaser.Math.Between(0, 800); y = 600 + margin; break;
+      case 0: x = -margin; y = Phaser.Math.Between(0, b.h); break; // Left
+      case 1: x = b.w + margin; y = Phaser.Math.Between(0, b.h); break; // Right
+      case 2: x = Phaser.Math.Between(0, b.w); y = -margin; break; // Top
+      case 3: x = Phaser.Math.Between(0, b.w); y = b.h + margin; break; // Bottom
     }
     return { x, y };
   }
@@ -166,24 +173,40 @@ export default class WaveSystem {
   onEnemyKilled(enemy) {
     this.totalKilledThisLevel++;
     gameState.addKill(enemy.score || 10);
+    gameState.enemiesRemaining = this.enemies.countActive();
 
     if (enemy.isBoss) {
       this.bossAlive = false;
       this.scene.events.emit('boss-killed', enemy);
     }
+    
+    // Strict FSM: prevent multi-triggering
+    if (this.levelComplete) return;
 
     // Check level complete
     if (this.isLevelComplete()) {
       this.levelComplete = true;
+      
+      gameState.level++; // Only increment here!
+      gameState.wave = 1;
+      gameState.isUpgradePhase = true;
+      gameState.enemiesRemaining = 0;
+      
+      console.log("=== LEVEL PROGRESSION TRACE ===");
+      console.log("LEVEL:", gameState.level);
+      console.log("WAVE:", gameState.wave);
+      console.log("ENEMIES LEFT:", gameState.enemiesRemaining);
+      console.log("UPGRADE PHASE:", gameState.isUpgradePhase);
+      
       this.scene.events.emit('level-complete');
-    } else if (!this.waveActive && this.enemies.countActive() <= 1) {
-      // Start next wave when current enemies are nearly cleared
+    } else if (!this.waveActive && this.enemies.countActive() === 0) {
+      // Start the next beat only after the arena is fully cleared.
       if (this.currentWaveIndex < this.config.waves.length - 1) {
-        this.scene.time.delayedCall(800, () => {
+        this.scene.time.delayedCall(1000, () => {
           this.startWave(this.currentWaveIndex + 1);
         });
       } else if (this.config.boss && !this.bossSpawned) {
-        this.scene.time.delayedCall(1500, () => {
+        this.scene.time.delayedCall(1000, () => {
           this.spawnBoss();
         });
       }

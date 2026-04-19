@@ -10,7 +10,7 @@ import gameState from '../managers/GameState.js';
 export default class HUD {
   constructor(scene) {
     this.scene = scene;
-    this.graphics = scene.add.graphics().setDepth(100);
+    this.graphics = scene.add.graphics().setDepth(100).setScrollFactor(0);
 
     // Level text
     this.levelText = scene.add.text(400, 12, '', {
@@ -18,7 +18,7 @@ export default class HUD {
       fontSize: '14px',
       color: '#8899bb',
       align: 'center'
-    }).setOrigin(0.5, 0).setDepth(100);
+    }).setOrigin(0.5, 0).setDepth(100).setScrollFactor(0);
 
     // Kill counter
     this.killText = scene.add.text(780, 12, '', {
@@ -26,7 +26,7 @@ export default class HUD {
       fontSize: '12px',
       color: '#667788',
       align: 'right'
-    }).setOrigin(1, 0).setDepth(100);
+    }).setOrigin(1, 0).setDepth(100).setScrollFactor(0);
 
     // Score
     this.scoreText = scene.add.text(780, 28, '', {
@@ -34,7 +34,7 @@ export default class HUD {
       fontSize: '12px',
       color: '#44ff88',
       align: 'right'
-    }).setOrigin(1, 0).setDepth(100);
+    }).setOrigin(1, 0).setDepth(100).setScrollFactor(0);
 
     // Wave indicator
     this.waveText = scene.add.text(400, 30, '', {
@@ -42,7 +42,7 @@ export default class HUD {
       fontSize: '11px',
       color: '#556677',
       align: 'center'
-    }).setOrigin(0.5, 0).setDepth(100);
+    }).setOrigin(0.5, 0).setDepth(100).setScrollFactor(0);
 
     // Parts display
     this.partsText = scene.add.text(16, 570, '', {
@@ -50,7 +50,7 @@ export default class HUD {
       fontSize: '11px',
       color: '#445566',
       align: 'left'
-    }).setOrigin(0, 1).setDepth(100);
+    }).setOrigin(0, 1).setDepth(100).setScrollFactor(0);
 
     // Boss HP bar (hidden by default)
     this.bossHpVisible = false;
@@ -81,18 +81,18 @@ export default class HUD {
     const hpX = 16, hpY = 16, hpW = 160, hpH = 14;
     const hpPercent = gameState.hp / gameState.maxHp;
 
-    // Background
-    this.graphics.fillStyle(0x111122, 0.8);
-    this.graphics.fillRoundedRect(hpX - 2, hpY - 2, hpW + 4, hpH + 4, 3);
-
-    // HP fill
-    const hpColor = hpPercent > 0.5 ? 0x00ff88 : hpPercent > 0.25 ? 0xffaa00 : 0xff3333;
-    this.graphics.fillStyle(hpColor, 0.9);
-    this.graphics.fillRoundedRect(hpX, hpY, hpW * hpPercent, hpH, 2);
-
-    // HP border
-    this.graphics.lineStyle(1, 0x334455, 0.6);
+    // HP border (Dark)
+    this.graphics.lineStyle(2, 0x334455, 0.6);
     this.graphics.strokeRoundedRect(hpX - 2, hpY - 2, hpW + 4, hpH + 4, 3);
+
+    // HP Fill (Wireframe stroke)
+    const hpColor = hpPercent > 0.5 ? 0x00ff88 : hpPercent > 0.25 ? 0xffaa00 : 0xff3333;
+    // We represent 'fill' via parallel lines or just a solid line
+    this.graphics.lineStyle(hpH, hpColor, 0.8);
+    this.graphics.beginPath();
+    this.graphics.moveTo(hpX, hpY + hpH/2);
+    this.graphics.lineTo(hpX + (hpW * hpPercent), hpY + hpH/2);
+    this.graphics.strokePath();
 
     // HP text overlay
     this.graphics.fillStyle(0xffffff, 0.9);
@@ -101,18 +101,22 @@ export default class HUD {
     if (gameState.shieldActive) {
       this.graphics.lineStyle(2, 0x4488ff, 0.6);
       this.graphics.strokeCircle(96, hpY + hpH + 14, 6);
-      this.graphics.fillStyle(0x4488ff, 0.4);
-      this.graphics.fillCircle(96, hpY + hpH + 14, 6);
+      this.graphics.strokeCircle(96, hpY + hpH + 14, 3);
     }
 
     // --- Dash cooldown ---
     if (movementSystem && gameState.dashSpeed > 0) {
       const dashPct = movementSystem.dashCooldownPercent;
       const dashX = 16, dashY = hpY + hpH + 8, dashW = 60, dashH = 4;
-      this.graphics.fillStyle(0x222233, 0.8);
-      this.graphics.fillRect(dashX, dashY, dashW, dashH);
-      this.graphics.fillStyle(dashPct >= 1 ? 0xff8844 : 0x553322, 0.9);
-      this.graphics.fillRect(dashX, dashY, dashW * dashPct, dashH);
+      
+      this.graphics.lineStyle(1, 0x222233, 0.8);
+      this.graphics.strokeRect(dashX, dashY, dashW, dashH);
+      
+      this.graphics.lineStyle(dashH, dashPct >= 1 ? 0xff8844 : 0x553322, 0.9);
+      this.graphics.beginPath();
+      this.graphics.moveTo(dashX, dashY + dashH/2);
+      this.graphics.lineTo(dashX + (dashW * dashPct), dashY + dashH/2);
+      this.graphics.strokePath();
     }
 
     // --- Boss HP Bar ---
@@ -120,14 +124,14 @@ export default class HUD {
       const bx = 200, by = 570, bw = 400, bh = 12;
       const bPercent = this.bossHp / this.bossMaxHp;
 
-      this.graphics.fillStyle(0x111111, 0.9);
-      this.graphics.fillRoundedRect(bx - 2, by - 2, bw + 4, bh + 4, 3);
-
-      this.graphics.fillStyle(0xff2244, 0.9);
-      this.graphics.fillRoundedRect(bx, by, bw * bPercent, bh, 2);
-
       this.graphics.lineStyle(1, 0xff4466, 0.5);
       this.graphics.strokeRoundedRect(bx - 2, by - 2, bw + 4, bh + 4, 3);
+
+      this.graphics.lineStyle(bh, 0xff2244, 0.9);
+      this.graphics.beginPath();
+      this.graphics.moveTo(bx, by + bh/2);
+      this.graphics.lineTo(bx + (bw * bPercent), by + bh/2);
+      this.graphics.strokePath();
     }
 
     // --- Text updates ---
