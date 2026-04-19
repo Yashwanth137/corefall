@@ -4,9 +4,46 @@
  * Tracks level, equipped parts, player stats, and run state.
  */
 
+import { PARTS, PART_CATEGORIES } from '../data/PartsData.js';
+
+const BASE_STATS = {
+  maxHp: 100,
+  speed: 200,
+  fireRate: 250,
+  bulletSpeed: 500,
+  bulletCount: 1,
+  bulletPattern: 'single',
+  bulletColor: 0xffffff,
+  bulletPierce: false,
+  bulletHoming: false,
+  spread: 0,
+  dashSpeed: 0,
+  dashDuration: 0,
+  dashCooldown: 0,
+  dashInvincible: false,
+  knockbackPower: 0,
+  hoverDrift: false,
+  friction: 1,
+  shieldActive: false,
+  shieldCooldown: 0,
+  shieldHits: 0,
+  regenRate: 0,
+  regenAmount: 0,
+  overchargeKills: 0,
+  overchargeDuration: 0,
+  overchargeDamageMultiplier: 1,
+  berserkerMode: false,
+  meleeDamage: 0,
+  meleeRange: 0,
+  meleeArc: 0
+};
+
 const DEFAULT_STATE = {
   // Progression
   level: 1,
+  wave: 1,
+  enemiesRemaining: 0,
+  isUpgradePhase: false,
   kills: 0,
   totalKills: 0,
   score: 0,
@@ -19,42 +56,8 @@ const DEFAULT_STATE = {
   },
 
   // Player stats (modified by parts)
-  maxHp: 100,
-  hp: 100,
-  speed: 200,
-  fireRate: 250,         // ms between shots
-  bulletSpeed: 500,
-  bulletCount: 1,
-  bulletPattern: 'single', // single, dual, shotgun, laser, missile, katana
-  bulletColor: 0xffffff,
-  bulletPierce: false,
-  bulletHoming: false,
-  spread: 0,
-
-  // Legs modifiers
-  dashSpeed: 0,
-  dashDuration: 0,
-  dashCooldown: 0,
-  dashInvincible: false,
-  knockbackPower: 0,
-  hoverDrift: false,
-  friction: 1,
-
-  // Core modifiers
-  shieldActive: false,
-  shieldCooldown: 0,
-  shieldHits: 0,
-  regenRate: 0,
-  regenAmount: 0,
-  overchargeKills: 0,
-  overchargeDuration: 0,
-  overchargeDamageMultiplier: 1,
-  berserkerMode: false,
-
-  // Melee (katana)
-  meleeDamage: 0,
-  meleeRange: 0,
-  meleeArc: 0
+  ...BASE_STATS,
+  hp: BASE_STATS.maxHp
 };
 
 class GameState {
@@ -68,14 +71,36 @@ class GameState {
 
   equipPart(category, partDef) {
     this.parts[category] = partDef.id;
-    // Apply the part's effects
-    partDef.apply(this);
+    this.recomputeDerivedStats();
   }
 
-  nextLevel() {
-    this.level++;
-    this.kills = 0;
+  recomputeDerivedStats() {
+    const previousHp = this.hp ?? BASE_STATS.maxHp;
+    const previousMaxHp = this.maxHp || BASE_STATS.maxHp;
+    const nextStats = { ...BASE_STATS };
+
+    for (const category of PART_CATEGORIES) {
+      const partId = this.parts[category];
+      if (!partId) continue;
+
+      const partDef = PARTS[category]?.options.find((option) => option.id === partId);
+      if (partDef) {
+        partDef.apply(nextStats);
+      }
+    }
+
+    Object.assign(this, nextStats);
+
+    if (!this.shieldActive) {
+      delete this._shieldReady;
+    }
+
+    const hpRatio = previousMaxHp > 0 ? previousHp / previousMaxHp : 1;
+    const scaledHp = previousHp <= 0 ? 0 : Math.max(1, Math.round(this.maxHp * hpRatio));
+    this.hp = Math.min(this.maxHp, scaledHp);
   }
+
+  // Removed nextLevel() as progression is strictly controlled by WaveSystem now.
 
   takeDamage(amount) {
     if (this.shieldActive && this._shieldReady) {

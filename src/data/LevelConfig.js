@@ -10,7 +10,7 @@ export const LEVEL_CONFIG = [
     name: 'Awakening',
     subtitle: 'The core stirs...',
     waves: [
-      { enemyType: 'drone', count: 5, delay: 1200 },
+      { enemyType: 'scrap_fiend', count: 5, delay: 1200 },
       { enemyType: 'drone', count: 7, delay: 1000 }
     ],
     boss: null,

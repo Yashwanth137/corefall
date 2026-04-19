@@ -26,7 +26,8 @@ export default class CombatSystem {
     this.killStreak = 0;
 
     // Shooting on pointer down
-    scene.input.on('pointerdown', () => this.tryShoot());
+    this.onPointerDown = () => this.tryShoot();
+    scene.input.on('pointerdown', this.onPointerDown);
   }
 
   tryShoot() {
@@ -38,8 +39,13 @@ export default class CombatSystem {
     const px = this.player.x;
     const py = this.player.y;
     const pointer = this.scene.input.activePointer;
+    
+    // Pure 2D
     const baseAngle = Phaser.Math.Angle.Between(px, py, pointer.worldX, pointer.worldY);
 
+    // Save aim angle back on player manually for smooth rotation
+    this.player.aimAngle = baseAngle;
+    
     const pattern = gameState.bulletPattern;
 
     if (pattern === 'katana') {
@@ -134,6 +140,8 @@ export default class CombatSystem {
 
   update(time, delta) {
     const now = time;
+    const bounds = this.scene.terrainSystem?.bounds || { w: 800, h: 600 };
+    const margin = 50;
 
     // Katana timer
     if (this.katanaSwinging) {
@@ -159,8 +167,8 @@ export default class CombatSystem {
 
       // Lifetime
       if (now - bullet.spawnTime > bullet.lifespan ||
-          bullet.x < -50 || bullet.x > 850 ||
-          bullet.y < -50 || bullet.y > 650) {
+          bullet.x < -margin || bullet.x > bounds.w + margin ||
+          bullet.y < -margin || bullet.y > bounds.h + margin) {
         bullet.destroy();
         return;
       }
@@ -202,5 +210,9 @@ export default class CombatSystem {
         this.scene.events.emit('overcharge-activated');
       }
     }
+  }
+
+  destroy() {
+    this.scene.input.off('pointerdown', this.onPointerDown);
   }
 }

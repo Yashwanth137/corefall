@@ -4,6 +4,19 @@
  */
 
 export const ENEMY_TYPES = {
+  scrap_fiend: {
+    name: 'Scrap Fiend',
+    hp: 1,
+    speed: 80,
+    damage: 10,
+    radius: 12,
+    color: 0xff4422,
+    shape: 'jagged', // Will draw segmented/jagged lines
+    behavior: 'chase',
+    score: 15,
+    deathParticles: 6
+  },
+
   drone: {
     name: 'Drone',
     hp: 1,
@@ -11,8 +24,8 @@ export const ENEMY_TYPES = {
     damage: 10,
     radius: 10,
     color: 0xff3333,
-    glowColor: 0xff0000,
-    behavior: 'chase',       // Direct chase toward player
+    shape: 'triangle',
+    behavior: 'chase',
     score: 10,
     deathParticles: 4
   },
@@ -22,10 +35,11 @@ export const ENEMY_TYPES = {
     hp: 2,
     speed: 70,
     damage: 15,
-    radius: 9,
+    radius: 11,
     color: 0xff8800,
-    glowColor: 0xff6600,
-    behavior: 'dash_charge', // Moves slowly, then charges in bursts
+    shape: 'arrow', // Stretched indicator
+    thick: true,
+    behavior: 'dash_charge',
     dashSpeed: 400,
     dashCooldown: 2000,
     dashDuration: 300,
@@ -40,8 +54,9 @@ export const ENEMY_TYPES = {
     damage: 12,
     radius: 14,
     color: 0x4488ff,
-    glowColor: 0x2266ff,
-    behavior: 'shielded',    // Has a frontal shield, must be hit from sides/back
+    shape: 'square', // Tank heavy
+    thick: true,
+    behavior: 'shielded',
     shieldArc: Math.PI * 0.6,
     score: 35,
     deathParticles: 8
@@ -52,10 +67,10 @@ export const ENEMY_TYPES = {
     hp: 1,
     speed: 140,
     damage: 5,
-    radius: 5,
+    radius: 4,
     color: 0xaaff00,
-    glowColor: 0x88cc00,
-    behavior: 'swarm',       // Fast, erratic movement in clusters
+    shape: 'dots', // Flickering particles
+    behavior: 'swarm',
     jitter: 50,
     score: 5,
     deathParticles: 2
@@ -67,10 +82,10 @@ export const ENEMY_TYPES = {
     hp: 30,
     speed: 55,
     damage: 20,
-    radius: 24,
+    radius: 26,
     color: 0xff4488,
-    glowColor: 0xff0066,
-    behavior: 'boss_sentinel', // Shoots back, high HP, patrols then charges
+    shape: 'hex_core', // Nested rotating hex
+    behavior: 'boss_sentinel',
     shootRate: 1500,
     bulletSpeed: 250,
     score: 200,
@@ -83,10 +98,10 @@ export const ENEMY_TYPES = {
     hp: 60,
     speed: 35,
     damage: 30,
-    radius: 36,
+    radius: 40,
     color: 0x8800ff,
-    glowColor: 0x6600cc,
-    behavior: 'boss_titan',    // Multi-phase: chase → spin attack → summon adds
+    shape: 'titan_core', // Huge multi-layer geometry
+    behavior: 'boss_titan',
     phase2Hp: 30,
     summonType: 'drone',
     summonCount: 4,
@@ -100,3 +115,4 @@ export const ENEMY_TYPES = {
 export function getEnemyData(type) {
   return ENEMY_TYPES[type] || ENEMY_TYPES.drone;
 }
+

@@ -1,217 +1,140 @@
 /**
  * TerrainSystem.js
- * Generates arena terrain per level with floor tiles, walls, and hazards.
- * Each level has a different layout to keep gameplay fresh.
+ * A minimal geometric rendering system replacing the organic terrain.
+ * Focuses on Ketchapp-style sparse arena lines, boundaries, and subtle lanes.
  */
 
-import * as Phaser from 'phaser';
 import gameState from '../managers/GameState.js';
 
-// Arena layout templates — 0=floor, 1=wall, 2=hazard, 3=tech
-// Each level uses a different layout
-const LAYOUTS = {
-  // Level 1-2: Open arena, minimal walls
-  open: [
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  ],
-  // Level 3-4: Corridors with cover
-  corridors: [
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,0,0],
-    [0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,0,0],
-    [0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  ],
-  // Level 5: Boss arena — pillars
-  boss_arena: [
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,3,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,0],
-    [0,3,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,3,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,0],
-    [0,3,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  ],
-  // Level 6-7: Hazard zones
-  hazard: [
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,2,2,0,0,0,0,0,0,0,0,0,0,0,0,2,2,0,0],
-    [0,0,2,2,0,0,0,0,0,0,0,0,0,0,0,0,2,2,0,0],
-    [0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0],
-    [0,0,2,2,0,0,0,0,0,0,0,0,0,0,0,0,2,2,0,0],
-    [0,0,2,2,0,0,0,0,0,0,0,0,0,0,0,0,2,2,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  ],
-  // Level 8-9: Dense combat arena
-  dense: [
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,1,0,0,0,0,0,2,0,0,0,0,2,0,0,0,0,0,1,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,1,0,0,0,0,0,2,0,0,0,0,2,0,0,0,0,0,1,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  ],
-  // Level 10: Final boss arena — ceremonial
-  final_boss: [
-    [3,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3],
-    [3,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [3,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3],
-    [3,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3],
-  ]
+const COLORS = {
+  background: 0x0a0a0c, // Deep dark neon backdrop
+  grid: 0x111122,
+  lane: 0x223344,
+  bounds: 0x44ffff,
+  hazard: 0xff3333
 };
-
-// Map level number to layout key
-const LEVEL_LAYOUT_MAP = {
-  1: 'open', 2: 'open',
-  3: 'corridors', 4: 'corridors',
-  5: 'boss_arena',
-  6: 'hazard', 7: 'hazard',
-  8: 'dense', 9: 'dense',
-  10: 'final_boss'
-};
-
-const TILE_SIZE = 40;
 
 export default class TerrainSystem {
   constructor(scene) {
     this.scene = scene;
     this.walls = scene.physics.add.staticGroup();
-    this.hazards = [];
-    this.build();
+    this.lanes = [];
+    
+    this.build(gameState.level);
   }
 
-  build() {
-    const level = gameState.level;
-    const layoutKey = LEVEL_LAYOUT_MAP[level] || 'open';
-    const layout = LAYOUTS[layoutKey];
+  build(level) {
+    // Generate scale based on level progression to give feeling of larger arenas
+    const growth = Math.min(4, Math.floor((level - 1) / 2));
+    this.bounds = {
+      w: 1200 + (growth * 200),
+      h: 1200 + (growth * 200)
+    };
+    
+    this.spawnPoint = { x: this.bounds.w / 2, y: this.bounds.h / 2 };
 
-    // Floor tiles (visual only — under everything)
-    for (let row = 0; row < layout.length; row++) {
-      for (let col = 0; col < layout[row].length; col++) {
-        const x = col * TILE_SIZE + TILE_SIZE / 2;
-        const y = row * TILE_SIZE + TILE_SIZE / 2;
-        const tileType = layout[row][col];
-
-        if (tileType === 0) {
-          // Normal floor — use tile_floor texture
-          const tile = this.scene.add.image(x, y, 'tile_floor').setDepth(0);
-          tile.setDisplaySize(TILE_SIZE, TILE_SIZE);
-          tile.setAlpha(0.6);
-        } else if (tileType === 1) {
-          // Wall — solid, collideable
-          const tile = this.scene.add.image(x, y, 'tile_wall').setDepth(1);
-          tile.setDisplaySize(TILE_SIZE, TILE_SIZE);
-
-          // Create physics body for collision
-          const wall = this.walls.create(x, y, 'tile_wall');
-          wall.setDisplaySize(TILE_SIZE, TILE_SIZE);
-          wall.setAlpha(0); // invisible — visual is the image above
-          wall.refreshBody();
-        } else if (tileType === 2) {
-          // Hazard — damages player standing on it
-          const tile = this.scene.add.image(x, y, 'tile_hazard').setDepth(0);
-          tile.setDisplaySize(TILE_SIZE, TILE_SIZE);
-          this.hazards.push({ x, y, size: TILE_SIZE });
-        } else if (tileType === 3) {
-          // Tech floor — decorative
-          const tile = this.scene.add.image(x, y, 'tile_tech').setDepth(0);
-          tile.setDisplaySize(TILE_SIZE, TILE_SIZE);
-          tile.setAlpha(0.7);
-        }
-      }
-    }
-
-    // Fill remaining floor area that's not covered by the grid
-    // (The layout is 20x15, each tile 40px = 800x600, matches the game area)
+    this.createStaticGeometry(level);
   }
 
-  /**
-   * Setup collision with player and enemies.
-   */
-  setupCollisions(player, enemies, bullets) {
-    if (this.walls.getLength() > 0) {
-      this.scene.physics.add.collider(player, this.walls);
-      this.scene.physics.add.collider(enemies, this.walls);
-      // Bullets destroy on wall hit
-      this.scene.physics.add.overlap(bullets, this.walls, (bullet) => {
-        if (!bullet.pierce) {
-          bullet.destroy();
-        }
+  createStaticGeometry(level) {
+    // We don't render them into graphics here. 
+    // They are logically registered here, and GameScene draws them!
+    
+    // 1. Center crossing lanes
+    this.lanes.push({
+      x1: 0, y1: this.bounds.h / 2,
+      x2: this.bounds.w, y2: this.bounds.h / 2,
+      width: 40, color: COLORS.lane
+    });
+    this.lanes.push({
+      x1: this.bounds.w / 2, y1: 0,
+      x2: this.bounds.w / 2, y2: this.bounds.h,
+      width: 40, color: COLORS.lane
+    });
+
+    // 2. Additional lanes for higher levels
+    if (level > 4) {
+      this.lanes.push({
+        x1: 0, y1: 0, x2: this.bounds.w, y2: this.bounds.h,
+        width: 20, color: COLORS.grid
+      });
+      this.lanes.push({
+        x1: 0, y1: this.bounds.h, x2: this.bounds.w, y2: 0,
+        width: 20, color: COLORS.grid
       });
     }
+
+    // Border blockers so physics handles it natively
+    const bW = 100; // border depth
+    this.createBlocker(-bW, -bW, this.bounds.w + bW * 2, bW); // Top
+    this.createBlocker(-bW, this.bounds.h, this.bounds.w + bW * 2, bW); // Bottom
+    this.createBlocker(-bW, 0, bW, this.bounds.h); // Left
+    this.createBlocker(this.bounds.w, 0, bW, this.bounds.h); // Right
   }
 
-  /**
-   * Check if player is on a hazard tile. Called from GameScene update.
-   */
-  checkHazards(player, damageCallback) {
-    for (const h of this.hazards) {
-      const dx = Math.abs(player.x - h.x);
-      const dy = Math.abs(player.y - h.y);
-      if (dx < h.size / 2 && dy < h.size / 2) {
-        damageCallback(2); // 2 damage per tick on hazard
-        return;
+  createBlocker(x, y, width, height) {
+    const blocker = this.scene.add.rectangle(x + width/2, y + height/2, width, height, 0x000000, 0);
+    this.scene.physics.add.existing(blocker, true);
+    blocker.visible = false;
+    this.walls.add(blocker);
+  }
+
+  setupCollisions(player, enemies, bullets) {
+    if (!this.walls) return;
+    this.scene.physics.add.collider(player, this.walls);
+    this.scene.physics.add.collider(enemies, this.walls);
+    this.scene.physics.add.collider(bullets, this.walls, (bullet) => {
+      if (bullet.active && !bullet.pierce) {
+        bullet.destroy();
       }
+    });
+  }
+
+  checkHazards(player, damageCallback) {
+    // Minimal geometry mode doesn't rely heavily on hazard pools,
+    // but if we wanted to add glowing red boundary edges that hurt...
+    if (
+      player.x < 10 || player.x > this.bounds.w - 10 || 
+      player.y < 10 || player.y > this.bounds.h - 10
+    ) {
+      damageCallback(5); // Touch the electric fence, get zapped.
     }
+  }
+
+  render(gfx) {
+    // Invoked by GameScene each frame onto the centralized graphics context.
+
+    // Background base
+    gfx.fillStyle(COLORS.background, 1);
+    gfx.fillRect(-500, -500, this.bounds.w + 1000, this.bounds.h + 1000);
+
+    // Draw Lanes
+    this.lanes.forEach(lane => {
+      gfx.lineStyle(lane.width, lane.color, 0.4);
+      gfx.beginPath();
+      gfx.moveTo(lane.x1, lane.y1);
+      gfx.lineTo(lane.x2, lane.y2);
+      gfx.strokePath();
+
+      // Core line
+      gfx.lineStyle(2, lane.color, 0.8);
+      gfx.beginPath();
+      gfx.moveTo(lane.x1, lane.y1);
+      gfx.lineTo(lane.x2, lane.y2);
+      gfx.strokePath();
+    });
+
+    // Draw Bound Box (Arena limit)
+    gfx.lineStyle(4, COLORS.bounds, 0.8);
+    gfx.strokeRect(0, 0, this.bounds.w, this.bounds.h);
+    
+    // Electric inner ring
+    gfx.lineStyle(1, COLORS.hazard, 0.5 + Math.sin(Date.now() * 0.005) * 0.2);
+    gfx.strokeRect(10, 10, this.bounds.w - 20, this.bounds.h - 20);
+  }
+
+  getVisualLift(x, y) {
+    // Legacy support to prevent crash where it expects toIso
+    return 0; 
   }
 }

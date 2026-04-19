@@ -184,6 +184,7 @@ export default class UpgradeScene extends Phaser.Scene {
 
   selectUpgrade(choice) {
     gameState.equipPart(choice.category, choice);
+    gameState.isUpgradePhase = false;
 
     // Flash and transition
     this.cameras.main.flash(300, 0, 255, 200);

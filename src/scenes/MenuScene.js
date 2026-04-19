@@ -47,8 +47,12 @@ export default class MenuScene extends Phaser.Scene {
       });
     }
 
-    // Central core visual
+    // Central effects visual
     this.coreGfx = this.add.graphics().setDepth(5);
+    
+    // Player Sprite 
+    // Uses the newly compressed native 32x32 buffer!
+    this.playerSprite = this.add.image(width / 2, 320, 'player_core').setDepth(9).setScale(4);
 
     // Title
     const title = this.add.text(width / 2, 160, 'COREFALL', {
@@ -117,7 +121,7 @@ export default class MenuScene extends Phaser.Scene {
 
     // Controls hint
     this.add.text(width / 2, height - 50, 'WASD Move  •  Mouse Aim  •  Click Shoot  •  Space Dash', {
-      fontFamily: '"Courier New", monospace',
+      fontFamily: '"Courier morphological", monospace',
       fontSize: '10px',
       color: '#223333'
     }).setOrigin(0.5).setDepth(10);
@@ -137,6 +141,8 @@ export default class MenuScene extends Phaser.Scene {
     this.elapsed += delta;
     const t = this.elapsed;
     const cx = 400, cy = 320;
+    
+    this.playerSprite.setY(cy + Math.sin(t * 0.003) * 5);
 
     // Animate particles
     this.gfx.clear();
@@ -151,7 +157,7 @@ export default class MenuScene extends Phaser.Scene {
       this.gfx.fillCircle(p.x, p.y, p.size);
     });
 
-    // Animate core
+    // Animate core effects
     this.coreGfx.clear();
     const pulse = 18 + Math.sin(t * 0.003) * 4;
 
@@ -161,20 +167,14 @@ export default class MenuScene extends Phaser.Scene {
     this.coreGfx.fillStyle(0x00ffcc, 0.04);
     this.coreGfx.fillCircle(cx, cy, pulse + 35);
 
-    // Core
-    this.coreGfx.fillStyle(0x00ffcc, 0.8);
-    this.coreGfx.fillCircle(cx, cy, 10);
-    this.coreGfx.fillStyle(0xffffff, 0.5);
-    this.coreGfx.fillCircle(cx, cy, 4);
-
     // Ring
     this.coreGfx.lineStyle(1, 0x00ffcc, 0.3);
-    this.coreGfx.strokeCircle(cx, cy, pulse);
+    this.coreGfx.strokeCircle(cx, cy, pulse + 8);
 
     // Orbiting dots
     for (let i = 0; i < 3; i++) {
       const angle = t * 0.002 + (i * Math.PI * 2 / 3);
-      const r = pulse + 8;
+      const r = pulse + 16;
       this.coreGfx.fillStyle(0x00ffcc, 0.4);
       this.coreGfx.fillCircle(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r, 2);
     }

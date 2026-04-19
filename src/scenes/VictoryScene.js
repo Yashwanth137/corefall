@@ -47,8 +47,12 @@ export default class VictoryScene extends Phaser.Scene {
       color: '#44aa88'
     }).setOrigin(0.5).setDepth(10);
 
-    // Final Cyborg visual
+    // Effects graphics
     this.cyborgGfx = this.add.graphics().setDepth(8);
+
+    // Final Cyborg visual
+    this.playerSprite = this.add.image(width / 2, 260, 'player_evolved').setDepth(9);
+    this.playerSprite.setScale(3); // Bump up scale for victory screen
 
     // Stats
     const statsY = 400;
@@ -111,6 +115,9 @@ export default class VictoryScene extends Phaser.Scene {
     this.cyborgGfx.clear();
     this.glowGfx.clear();
 
+    // Bobbing animation for sprite
+    this.playerSprite.setY(cy + Math.sin(t * 0.003) * 5);
+
     // Pulsing glow
     const glowSize = 50 + Math.sin(t * 0.002) * 10;
     this.glowGfx.fillStyle(0x00ffcc, 0.08);
@@ -118,22 +125,14 @@ export default class VictoryScene extends Phaser.Scene {
     this.glowGfx.fillStyle(0x00ffcc, 0.05);
     this.glowGfx.fillCircle(cx, cy, glowSize + 40);
 
-    // Core body
-    this.cyborgGfx.fillStyle(0x00ffcc, 1);
-    this.cyborgGfx.fillCircle(cx, cy, 20);
-
-    // Inner core
-    this.cyborgGfx.fillStyle(0xffffff, 0.7);
-    this.cyborgGfx.fillCircle(cx, cy, 8);
-
     // Pulse ring
     this.cyborgGfx.lineStyle(2, 0x00ffcc, 0.4 + Math.sin(t * 0.003) * 0.2);
-    this.cyborgGfx.strokeCircle(cx, cy, 28 + Math.sin(t * 0.004) * 4);
+    this.cyborgGfx.strokeCircle(cx, cy, 40 + Math.sin(t * 0.004) * 4);
 
-    // Katana blade if has katana
+    // Katana swing effect if has katana
     if (gameState.parts.arms === 'katana') {
-      const angle = -Math.PI / 4 + Math.sin(t * 0.002) * 0.1;
-      const bladeLen = 50;
+      const angle = -Math.PI / 4 + Math.sin(t * 0.004) * 0.3;
+      const bladeLen = 60;
       const bx = cx + Math.cos(angle) * bladeLen;
       const by = cy + Math.sin(angle) * bladeLen;
       this.cyborgGfx.lineStyle(3, 0xff00ff, 0.9);
@@ -142,36 +141,25 @@ export default class VictoryScene extends Phaser.Scene {
       this.cyborgGfx.fillCircle(bx, by, 3);
     }
 
-    // Arm nodes
-    const armAngle1 = Math.PI * 0.4;
-    const armAngle2 = -Math.PI * 0.4;
-    this.cyborgGfx.fillStyle(0x88ffcc, 0.8);
-    this.cyborgGfx.fillCircle(cx + Math.cos(armAngle1) * 25, cy + Math.sin(armAngle1) * 25, 5);
-    this.cyborgGfx.fillCircle(cx + Math.cos(armAngle2) * 25, cy + Math.sin(armAngle2) * 25, 5);
-
-    // Leg nodes
-    this.cyborgGfx.fillStyle(0x66ddaa, 0.8);
-    this.cyborgGfx.fillCircle(cx - 10, cy + 28, 4);
-    this.cyborgGfx.fillCircle(cx + 10, cy + 28, 4);
-
     // Core ring
     if (gameState.parts.core === 'berserker') {
       this.cyborgGfx.lineStyle(2, 0xff0044, 0.5 + Math.sin(t * 0.006) * 0.3);
-      this.cyborgGfx.strokeCircle(cx, cy, 32);
+      this.cyborgGfx.strokeCircle(cx, cy, 46);
     }
 
     // Energy orbit
     const orbitAngle = t * 0.003;
     this.cyborgGfx.fillStyle(0x00ffcc, 0.6);
     this.cyborgGfx.fillCircle(
-      cx + Math.cos(orbitAngle) * 36,
-      cy + Math.sin(orbitAngle) * 36,
-      2
+      cx + Math.cos(orbitAngle) * 50,
+      cy + Math.sin(orbitAngle) * 50,
+      3
     );
     this.cyborgGfx.fillCircle(
-      cx + Math.cos(orbitAngle + Math.PI) * 36,
-      cy + Math.sin(orbitAngle + Math.PI) * 36,
-      2
+      cx + Math.cos(orbitAngle + Math.PI) * 50,
+      cy + Math.sin(orbitAngle + Math.PI) * 50,
+      3
     );
   }
 }
+

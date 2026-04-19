@@ -17,6 +17,9 @@ const config = {
   width: 800,
   height: 600,
   backgroundColor: '#060a14',
+  pixelArt: true,
+  antialias: false,
+  roundPixels: true,
   physics: {
     default: 'arcade',
     arcade: {
