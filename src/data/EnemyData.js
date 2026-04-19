@@ -7,12 +7,12 @@ export const ENEMY_TYPES = {
   scrap_fiend: {
     name: 'Scrap Fiend',
     hp: 1,
-    speed: 80,
+    speed: 100,
     damage: 10,
     radius: 12,
     color: 0xff4422,
-    shape: 'jagged', // Will draw segmented/jagged lines
-    behavior: 'chase',
+    shape: 'jagged',
+    behavior: 'line_runner', // Bound to the exact same grid lines as the player
     score: 15,
     deathParticles: 6
   },
@@ -37,10 +37,10 @@ export const ENEMY_TYPES = {
     damage: 15,
     radius: 11,
     color: 0xff8800,
-    shape: 'arrow', // Stretched indicator
+    shape: 'arrow',
     thick: true,
     behavior: 'dash_charge',
-    dashSpeed: 400,
+    dashSpeed: 500,
     dashCooldown: 2000,
     dashDuration: 300,
     score: 25,
@@ -54,7 +54,7 @@ export const ENEMY_TYPES = {
     damage: 12,
     radius: 14,
     color: 0x4488ff,
-    shape: 'square', // Tank heavy
+    shape: 'square',
     thick: true,
     behavior: 'shielded',
     shieldArc: Math.PI * 0.6,
@@ -65,15 +65,32 @@ export const ENEMY_TYPES = {
   swarm: {
     name: 'Swarmling',
     hp: 1,
-    speed: 140,
+    speed: 130,
     damage: 5,
-    radius: 4,
+    radius: 5,
     color: 0xaaff00,
-    shape: 'dots', // Flickering particles
+    shape: 'dots',
     behavior: 'swarm',
-    jitter: 50,
+    jitter: 80,
     score: 5,
     deathParticles: 2
+  },
+
+  ranged: {
+    name: 'Ranged',
+    hp: 2,
+    speed: 60,
+    damage: 10,
+    radius: 12,
+    color: 0xffff00,
+    shape: 'triangle',
+    thick: false,
+    behavior: 'ranged',
+    shootRate: 2000,
+    bulletSpeed: 180,
+    stopDistance: 250, // Stop chasing when this close
+    score: 30,
+    deathParticles: 4
   },
 
   // Bosses
@@ -84,7 +101,7 @@ export const ENEMY_TYPES = {
     damage: 20,
     radius: 26,
     color: 0xff4488,
-    shape: 'hex_core', // Nested rotating hex
+    shape: 'hex_core',
     behavior: 'boss_sentinel',
     shootRate: 1500,
     bulletSpeed: 250,
@@ -100,7 +117,7 @@ export const ENEMY_TYPES = {
     damage: 30,
     radius: 40,
     color: 0x8800ff,
-    shape: 'titan_core', // Huge multi-layer geometry
+    shape: 'titan_core',
     behavior: 'boss_titan',
     phase2Hp: 30,
     summonType: 'drone',
@@ -115,4 +132,3 @@ export const ENEMY_TYPES = {
 export function getEnemyData(type) {
   return ENEMY_TYPES[type] || ENEMY_TYPES.drone;
 }
-

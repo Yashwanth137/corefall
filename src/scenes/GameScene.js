@@ -522,6 +522,7 @@ export default class GameScene extends Phaser.Scene {
     const p = this.player;
     const isHit = p._hitFlashTimer > 0;
     const color = p.currentTint || 0x00ffcc;
+    const level = gameState.level;
     
     // Glitch effect on hit
     let ox = 0, oy = 0;
@@ -532,29 +533,109 @@ export default class GameScene extends Phaser.Scene {
 
     const px = p.x + ox;
     const py = p.y + oy;
+    const aim = p.aimAngle || 0;
 
-    // Player base shape (Hexagon)
+    // --- BASE CYBORG EVOLUTION (Scales complexity 1 to 10) ---
+    // Start with a small basic circle and evolve into a complex multi-layered machine
+    const baseRadius = 8 + (level * 1.5);
+    
     this.gfx.lineStyle(2, color, isHit ? 0.5 : 1);
-    this.drawPolygon(this.gfx, px, py, 6, 14, p.aimAngle);
-
-    // Inner core for shield/regen/reactor
-    const core = gameState.parts.core;
-    if (core === 'reactor') {
-      this.gfx.lineStyle(1, 0xffff00, 0.5 + Math.sin(time * 0.006) * 0.3);
-      this.gfx.strokeCircle(px, py, 6);
-    } else if (core === 'shield' && gameState._shieldReady) {
-      this.gfx.lineStyle(2, 0x4488ff, 0.4 + Math.sin(time * 0.004) * 0.2);
-      this.gfx.strokeCircle(px, py, 24);
+    
+    if (level < 3) {
+      // Basic core
+      this.gfx.strokeCircle(px, py, baseRadius);
+    } else if (level < 6) {
+      // Segmented plates
+      this.drawBrokenPolygon(this.gfx, px, py, 6, baseRadius, aim, 0.2);
+      this.gfx.strokeCircle(px, py, baseRadius * 0.6);
+    } else {
+      // Intricate rebuilt titan core
+      this.drawPolygon(this.gfx, px, py, 8, baseRadius, time * 0.001);
+      this.drawPolygon(this.gfx, px, py, 6, baseRadius * 0.7, -time * 0.0015);
+      this.gfx.strokeCircle(px, py, baseRadius * 0.4);
     }
 
-    // Aim Line
-    const angle = p.aimAngle || 0;
-    const lineX1 = px + Math.cos(angle) * 16;
-    const lineY1 = py + Math.sin(angle) * 16;
-    const lineX2 = px + Math.cos(angle) * 40;
-    const lineY2 = py + Math.sin(angle) * 40;
-    this.gfx.lineStyle(1, 0xffffff, 0.2);
-    this.gfx.lineBetween(lineX1, lineY1, lineX2, lineY2);
+    const prts = gameState.parts;
+    
+    // --- CORE UPGRADES ---
+    if (prts.core === 'reactor') {
+      this.gfx.lineStyle(1, 0xffff00, 0.8 + Math.sin(time * 0.01) * 0.2);
+      this.drawPolygon(this.gfx, px, py, 4, 6, time * 0.005);
+    } else if (prts.core === 'shield') {
+      this.gfx.lineStyle(2, 0x4488ff, 0.4 + Math.sin(time * 0.004) * 0.3);
+      this.gfx.strokeCircle(px, py, baseRadius + 12);
+    } else if (prts.core === 'regen') {
+      this.gfx.lineStyle(2, 0x00ff44, 1);
+      const ht = 4 + Math.abs(Math.sin(time * 0.005)) * 6;
+      this.gfx.lineBetween(px, py - ht, px, py + ht);
+      this.gfx.lineBetween(px - ht, py, px + ht, py);
+    } else if (prts.core === 'overcharge') {
+      this.gfx.lineStyle(1.5, 0xff00ff, 0.8 + Math.random() * 0.2);
+      this.drawBrokenPolygon(this.gfx, px, py, 5, baseRadius + 4, time * -0.003, 0.5);
+    } else if (prts.core === 'berserker') {
+      this.gfx.lineStyle(2, 0xff0044, 0.9);
+      this.drawPolygon(this.gfx, px, py, 3, baseRadius + 6, aim);
+    }
+
+    // --- LEGS UPGRADES ---
+    if (prts.legs === 'wheels') {
+      const vx1 = px + Math.cos(aim + Math.PI/2) * (baseRadius + 5);
+      const vy1 = py + Math.sin(aim + Math.PI/2) * (baseRadius + 5);
+      const vx2 = px + Math.cos(aim - Math.PI/2) * (baseRadius + 5);
+      const vy2 = py + Math.sin(aim - Math.PI/2) * (baseRadius + 5);
+      this.gfx.lineStyle(2, 0x88ff00, 1);
+      this.gfx.strokeCircle(vx1, vy1, 4);
+      this.gfx.strokeCircle(vx2, vy2, 4);
+    } else if (prts.legs === 'jump_jets') {
+      const bx = px + Math.cos(aim + Math.PI) * baseRadius;
+      const by = py + Math.sin(aim + Math.PI) * baseRadius;
+      this.gfx.lineStyle(2, 0xff8844, 0.5 + Math.random() * 0.5);
+      this.gfx.lineBetween(bx, by, bx + Math.cos(aim + Math.PI)*12, by + Math.sin(aim + Math.PI)*12);
+    } else if (prts.legs === 'heavy_treads') {
+      this.gfx.lineStyle(3, 0x888888, 1);
+      const tx1 = px + Math.cos(aim + Math.PI/2) * (baseRadius + 8);
+      const ty1 = py + Math.sin(aim + Math.PI/2) * (baseRadius + 8);
+      this.gfx.strokeRect(tx1 - 4, ty1 - 8, 8, 16);
+      const tx2 = px + Math.cos(aim - Math.PI/2) * (baseRadius + 8);
+      const ty2 = py + Math.sin(aim - Math.PI/2) * (baseRadius + 8);
+      this.gfx.strokeRect(tx2 - 4, ty2 - 8, 8, 16);
+    } else if (prts.legs === 'hover') {
+      this.gfx.lineStyle(1, 0x44ddff, 0.5);
+      this.gfx.strokeEllipse(px, py, baseRadius + 15, baseRadius + 20);
+    }
+
+    // --- ARMS UPGRADES (Aim indicators) ---
+    this.gfx.lineStyle(2, color, 0.8);
+    if (prts.arms === 'dual_blaster') {
+      const cx1 = px + Math.cos(aim + 0.3)*baseRadius;
+      const cy1 = py + Math.sin(aim + 0.3)*baseRadius;
+      const cx2 = px + Math.cos(aim - 0.3)*baseRadius;
+      const cy2 = py + Math.sin(aim - 0.3)*baseRadius;
+      this.gfx.lineBetween(cx1, cy1, cx1 + Math.cos(aim)*10, cy1 + Math.sin(aim)*10);
+      this.gfx.lineBetween(cx2, cy2, cx2 + Math.cos(aim)*10, cy2 + Math.sin(aim)*10);
+    } else if (prts.arms === 'laser') {
+      const cx = px + Math.cos(aim)*baseRadius;
+      const cy = py + Math.sin(aim)*baseRadius;
+      this.gfx.lineStyle(3, 0x00ffff, 0.8);
+      this.gfx.lineBetween(cx, cy, cx + Math.cos(aim)*15, cy + Math.sin(aim)*15);
+    } else if (prts.arms === 'shotgun') {
+      for(let a = -0.4; a <= 0.4; a += 0.4) {
+         const bx = px + Math.cos(aim + a)*baseRadius;
+         const by = py + Math.sin(aim + a)*baseRadius;
+         this.gfx.lineBetween(bx, by, bx + Math.cos(aim+a)*8, by + Math.sin(aim+a)*8);
+      }
+    } else if (prts.arms === 'missile') {
+      const cx = px + Math.cos(aim)*baseRadius;
+      const cy = py + Math.sin(aim)*baseRadius;
+      this.gfx.strokeRect(cx - 5, cy - 5, 10, 10);
+    } else if (prts.arms === 'katana') {
+      this.gfx.beginPath();
+      this.gfx.arc(px, py, baseRadius + 10, aim - 0.8, aim + 0.8);
+      this.gfx.strokePath();
+    } else {
+      // Default single node
+      this.gfx.lineBetween(px + Math.cos(aim)*baseRadius, py + Math.sin(aim)*baseRadius, px + Math.cos(aim)*(baseRadius + 10), py + Math.sin(aim)*(baseRadius + 10));
+    }
   }
 
   renderEnemy(enemy, time) {

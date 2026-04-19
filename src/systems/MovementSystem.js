@@ -43,8 +43,9 @@ export default class MovementSystem {
         this.isDashing = false;
         player._invincible = false;
       } else {
-        player.body.setVelocity(this.dashVelX, this.dashVelY);
-        return; // Skip normal movement during dash
+        // Dash directly sets constant velocity along the grid
+        this.applyGridConstrainedMovement(player, this.dashVelX * dt, this.dashVelY * dt, dt);
+        return;
       }
     }
 
@@ -69,23 +70,21 @@ export default class MovementSystem {
     if (len > 0) { mx /= len; my /= len; }
 
     if (gameState.hoverDrift) {
-      // Hover: smooth acceleration/deceleration
       const accel = 600;
       const friction = gameState.friction || 0.92;
       this.velX += mx * accel * dt;
       this.velY += my * accel * dt;
       this.velX *= friction;
       this.velY *= friction;
-
-      // Clamp to max speed
+      
       const mag = Math.sqrt(this.velX * this.velX + this.velY * this.velY);
       if (mag > speed) {
         this.velX = (this.velX / mag) * speed;
         this.velY = (this.velY / mag) * speed;
       }
-      player.body.setVelocity(this.velX, this.velY);
+      this.applyGridConstrainedMovement(player, this.velX * dt, this.velY * dt, dt);
     } else {
-      player.body.setVelocity(mx * speed, my * speed);
+      this.applyGridConstrainedMovement(player, mx * speed * dt, my * speed * dt, dt);
     }
 
     // --- Aim toward mouse ---
@@ -95,6 +94,29 @@ export default class MovementSystem {
       pointer.worldX, pointer.worldY
     );
     player.aimAngle = angle;
+  }
+
+  applyGridConstrainedMovement(player, moveX, moveY, dt) {
+    if (moveX === 0 && moveY === 0) {
+       player.body.setVelocity(0, 0);
+       return;
+    }
+
+    const targetX = player.x + moveX;
+    const targetY = player.y + moveY;
+    
+    // Project the intended next position onto the strict navigation grid
+    const terrain = this.scene.terrainSystem;
+    if (!terrain) return;
+
+    const snapped = terrain.getClosestPointOnGrid(targetX, targetY);
+
+    // Apply the constrained velocity to allow Arcade Physics to move us smoothly
+    // and naturally handle bounds/collisions with enemies if needed.
+    player.body.setVelocity(
+      (snapped.x - player.x) / dt,
+      (snapped.y - player.y) / dt
+    );
   }
 
   triggerDash() {
@@ -142,3 +164,4 @@ export default class MovementSystem {
     return Math.max(0, 1 - (this.dashCooldownTimer / gameState.dashCooldown));
   }
 }
+

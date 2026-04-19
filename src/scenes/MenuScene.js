@@ -49,10 +49,6 @@ export default class MenuScene extends Phaser.Scene {
 
     // Central effects visual
     this.coreGfx = this.add.graphics().setDepth(5);
-    
-    // Player Sprite 
-    // Uses the newly compressed native 32x32 buffer!
-    this.playerSprite = this.add.image(width / 2, 320, 'player_core').setDepth(9).setScale(4);
 
     // Title
     const title = this.add.text(width / 2, 160, 'COREFALL', {
@@ -81,7 +77,7 @@ export default class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(10);
 
     // Start button
-    const btnY = 420;
+    const btnY = 460;
     const btnBg = this.add.rectangle(width / 2, btnY, 240, 50, 0x0a1a14).setDepth(10);
     btnBg.setStrokeStyle(2, 0x00ffcc, 0.5);
     btnBg.setInteractive({ useHandCursor: true });
@@ -120,14 +116,14 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     // Controls hint
-    this.add.text(width / 2, height - 50, 'WASD Move  •  Mouse Aim  •  Click Shoot  •  Space Dash', {
+    this.add.text(width / 2, height - 50, 'WASD Constrained Move  •  Mouse Aim  •  Click Shoot  •  Space Dash', {
       fontFamily: '"Courier morphological", monospace',
       fontSize: '10px',
       color: '#223333'
     }).setOrigin(0.5).setDepth(10);
 
     // Version
-    this.add.text(width - 10, height - 10, 'v0.1', {
+    this.add.text(width - 10, height - 10, 'v0.2', {
       fontFamily: 'monospace',
       fontSize: '9px',
       color: '#1a2222'
@@ -140,11 +136,9 @@ export default class MenuScene extends Phaser.Scene {
   update(time, delta) {
     this.elapsed += delta;
     const t = this.elapsed;
-    const cx = 400, cy = 320;
-    
-    this.playerSprite.setY(cy + Math.sin(t * 0.003) * 5);
+    const cx = 400, cy = 340;
 
-    // Animate particles
+    // Animate particles (Wireframe drops)
     this.gfx.clear();
     this.particles.forEach(p => {
       p.x += p.vx * (delta / 1000);
@@ -153,30 +147,38 @@ export default class MenuScene extends Phaser.Scene {
       if (p.x > 800) p.x = 0;
       if (p.y < 0) p.y = 600;
       if (p.y > 600) p.y = 0;
-      this.gfx.fillStyle(0x00ffcc, p.alpha);
-      this.gfx.fillCircle(p.x, p.y, p.size);
+      this.gfx.lineStyle(1, 0x00ffcc, p.alpha);
+      this.gfx.strokeCircle(p.x, p.y, p.size);
     });
 
     // Animate core effects
     this.coreGfx.clear();
     const pulse = 18 + Math.sin(t * 0.003) * 4;
 
-    // Outer glow
-    this.coreGfx.fillStyle(0x00ffcc, 0.06);
-    this.coreGfx.fillCircle(cx, cy, pulse + 20);
-    this.coreGfx.fillStyle(0x00ffcc, 0.04);
-    this.coreGfx.fillCircle(cx, cy, pulse + 35);
+    // Drawn Hexagon Core Base
+    this.coreGfx.lineStyle(3, 0x00ffcc, 1);
+    this.coreGfx.beginPath();
+    for (let i = 0; i < 6; i++) {
+       let a = (i/6) * Math.PI*2 + (t * 0.001);
+       if (i===0) this.coreGfx.moveTo(cx + Math.cos(a)*20, cy + Math.sin(a)*20);
+       else this.coreGfx.lineTo(cx + Math.cos(a)*20, cy + Math.sin(a)*20);
+    }
+    this.coreGfx.closePath();
+    this.coreGfx.strokePath();
 
-    // Ring
-    this.coreGfx.lineStyle(1, 0x00ffcc, 0.3);
-    this.coreGfx.strokeCircle(cx, cy, pulse + 8);
+    // Outer wireframe scan ring
+    this.coreGfx.lineStyle(2, 0x00ffcc, 0.4);
+    this.coreGfx.beginPath();
+    this.coreGfx.arc(cx, cy, pulse + 25, t * 0.002, t * 0.002 + Math.PI * 1.5);
+    this.coreGfx.strokePath();
 
-    // Orbiting dots
+    // Orbiting nodes (simulating parts evolving)
     for (let i = 0; i < 3; i++) {
-      const angle = t * 0.002 + (i * Math.PI * 2 / 3);
-      const r = pulse + 16;
-      this.coreGfx.fillStyle(0x00ffcc, 0.4);
-      this.coreGfx.fillCircle(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r, 2);
+      const angle = -t * 0.002 + (i * Math.PI * 2 / 3);
+      const r = pulse + 35;
+      this.coreGfx.lineStyle(3, 0x00ffcc, 0.8);
+      this.coreGfx.strokeCircle(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r, 4);
     }
   }
 }
+
