@@ -120,6 +120,20 @@ export default class WaveSystem {
     if (data.behavior === 'swarm') {
       enemy.jitter = data.jitter;
     }
+    if (data.behavior === 'line_runner') {
+      const terrain = this.scene.terrainSystem;
+      const snapped = terrain?.getClosestPointOnGrid(enemy.x, enemy.y);
+      if (snapped) {
+        enemy.setPosition(snapped.x, snapped.y);
+      }
+      enemy.nextGridRetarget = 0;
+    }
+    if (data.behavior === 'ranged') {
+      enemy.shootRate = data.shootRate;
+      enemy.lastShot = 0;
+      enemy.bulletSpeed = data.bulletSpeed;
+      enemy.stopDistance = data.stopDistance;
+    }
     if (data.behavior === 'boss_sentinel') {
       enemy.shootRate = data.shootRate;
       enemy.lastShot = 0;
@@ -242,6 +256,10 @@ export default class WaveSystem {
         );
         break;
 
+      case 'line_runner':
+        this.moveEnemyAlongGrid(enemy, px, py, delta);
+        break;
+
       case 'dash_charge':
         if (enemy.isDashing) {
           enemy.dashTimer -= delta;
@@ -286,6 +304,28 @@ export default class WaveSystem {
         );
         break;
 
+      case 'ranged':
+        if (dist > enemy.stopDistance + 30) {
+          enemy.body.setVelocity(
+            Math.cos(angle) * enemy.speed,
+            Math.sin(angle) * enemy.speed
+          );
+        } else if (dist < enemy.stopDistance - 60) {
+          enemy.body.setVelocity(
+            -Math.cos(angle) * enemy.speed,
+            -Math.sin(angle) * enemy.speed
+          );
+        } else {
+          enemy.body.setVelocity(0, 0);
+        }
+        enemy.facingAngle = angle;
+
+        if (time - enemy.lastShot > enemy.shootRate && dist < 500) {
+          enemy.lastShot = time;
+          this.scene.events.emit('boss-shoot', enemy, angle);
+        }
+        break;
+
       case 'boss_sentinel':
         // Chase and shoot
         enemy.body.setVelocity(
@@ -323,6 +363,30 @@ export default class WaveSystem {
           Math.sin(angle) * enemy.speed
         );
     }
+  }
+
+  moveEnemyAlongGrid(enemy, targetX, targetY, delta) {
+    const terrain = this.scene.terrainSystem;
+    if (!terrain || delta <= 0) {
+      enemy.body.setVelocity(0, 0);
+      return;
+    }
+
+    const enemyGrid = terrain.getClosestPointOnGrid(enemy.x, enemy.y);
+    const targetGrid = terrain.getClosestPointOnGrid(targetX, targetY);
+    const angle = Phaser.Math.Angle.Between(enemyGrid.x, enemyGrid.y, targetGrid.x, targetGrid.y);
+    const dt = delta / 1000;
+    const step = enemy.speed * dt;
+    const next = terrain.getClosestPointOnGrid(
+      enemyGrid.x + Math.cos(angle) * step,
+      enemyGrid.y + Math.sin(angle) * step
+    );
+
+    enemy.body.setVelocity(
+      (next.x - enemy.x) / dt,
+      (next.y - enemy.y) / dt
+    );
+    enemy.facingAngle = Math.atan2(next.y - enemy.y, next.x - enemy.x);
   }
 
   destroy() {

@@ -21,6 +21,8 @@ export default class TerrainSystem {
     
     this.navigationLines = [];
     this.lanes = [];
+    this.hazardZones = [];
+    this.blockerZones = [];
     
     this.build(gameState.level);
   }
@@ -31,6 +33,10 @@ export default class TerrainSystem {
       w: 1200 + (growth * 200),
       h: 1200 + (growth * 200)
     };
+    this.navigationLines = [];
+    this.lanes = [];
+    this.hazardZones = [];
+    this.blockerZones = [];
     
     this.spawnPoint = { x: this.bounds.w / 2, y: this.bounds.h / 2 };
     this.createStaticGeometry(level);
@@ -39,6 +45,15 @@ export default class TerrainSystem {
   addNavigationLine(x1, y1, x2, y2, width, color) {
     this.lanes.push({ x1, y1, x2, y2, width, color });
     this.navigationLines.push({ p1: { x: x1, y: y1 }, p2: { x: x2, y: y2 } });
+  }
+
+  addHazardZone(x, y, width, height) {
+    this.hazardZones.push({ x, y, width, height });
+  }
+
+  addBlockerZone(x, y, width, height) {
+    this.blockerZones.push({ x, y, width, height });
+    this.createBlocker(x, y, width, height);
   }
 
   createStaticGeometry(level) {
@@ -68,6 +83,35 @@ export default class TerrainSystem {
       this.addNavigationLine(this.bounds.w - stepX, stepY, stepX, this.bounds.h - stepY, 15, COLORS.lane);
     }
 
+    // Damage strips make the lane layout matter mechanically.
+    if (level >= 2) {
+      this.addHazardZone(this.bounds.w / 2 - 90, stepY * 2 - 12, 180, 24);
+      this.addHazardZone(this.bounds.w / 2 - 90, this.bounds.h - stepY * 2 - 12, 180, 24);
+    }
+    if (level >= 4) {
+      this.addHazardZone(stepX * 2 - 12, this.bounds.h / 2 - 90, 24, 180);
+      this.addHazardZone(this.bounds.w - stepX * 2 - 12, this.bounds.h / 2 - 90, 24, 180);
+    }
+    if (level >= 7) {
+      this.addHazardZone(this.bounds.w / 2 - 12, this.bounds.h / 2 - 180, 24, 120);
+      this.addHazardZone(this.bounds.w / 2 - 12, this.bounds.h / 2 + 60, 24, 120);
+    }
+
+    // Internal blocks occupy cell centers, shaping direct enemy approaches without
+    // closing the navigation lines the player and line-runners use.
+    if (level >= 3) {
+      const blockW = Math.min(120, stepX * 0.45);
+      const blockH = Math.min(120, stepY * 0.45);
+      this.addBlockerZone(stepX * 1.5 - blockW / 2, stepY * 1.5 - blockH / 2, blockW, blockH);
+      this.addBlockerZone(this.bounds.w - stepX * 1.5 - blockW / 2, this.bounds.h - stepY * 1.5 - blockH / 2, blockW, blockH);
+    }
+    if (level >= 6) {
+      const blockW = Math.min(110, stepX * 0.4);
+      const blockH = Math.min(110, stepY * 0.4);
+      this.addBlockerZone(this.bounds.w - stepX * 1.5 - blockW / 2, stepY * 1.5 - blockH / 2, blockW, blockH);
+      this.addBlockerZone(stepX * 1.5 - blockW / 2, this.bounds.h - stepY * 1.5 - blockH / 2, blockW, blockH);
+    }
+
     // Border blockers natively outside the lines
     const bW = 100; 
     this.createBlocker(-bW, -bW, this.bounds.w + bW * 2, bW); 
@@ -83,7 +127,7 @@ export default class TerrainSystem {
     this.walls.add(blocker);
   }
 
-  setupCollisions(player, enemies, bullets) {
+  setupCollisions(player, enemies, bullets, enemyBullets) {
     if (!this.walls) return;
     this.scene.physics.add.collider(player, this.walls);
     this.scene.physics.add.collider(enemies, this.walls);
@@ -92,11 +136,33 @@ export default class TerrainSystem {
         bullet.destroy();
       }
     });
+    if (enemyBullets) {
+      this.scene.physics.add.collider(enemyBullets, this.walls, (bullet) => {
+        if (bullet.active) {
+          bullet.destroy();
+        }
+      });
+    }
   }
 
   checkHazards(player, damageCallback) {
+    if (gameState.hoverDrift) return;
+
     if (player.x < 10 || player.x > this.bounds.w - 10 || player.y < 10 || player.y > this.bounds.h - 10) {
       damageCallback(5); 
+      return;
+    }
+
+    for (const zone of this.hazardZones) {
+      if (
+        player.x >= zone.x &&
+        player.x <= zone.x + zone.width &&
+        player.y >= zone.y &&
+        player.y <= zone.y + zone.height
+      ) {
+        damageCallback(5);
+        return;
+      }
     }
   }
 
@@ -152,8 +218,21 @@ export default class TerrainSystem {
     // Bound Box
     gfx.lineStyle(4, COLORS.bounds, 0.8);
     gfx.strokeRect(0, 0, this.bounds.w, this.bounds.h);
+
+    this.blockerZones.forEach(blocker => {
+      gfx.fillStyle(0x071015, 0.95);
+      gfx.fillRect(blocker.x, blocker.y, blocker.width, blocker.height);
+      gfx.lineStyle(2, COLORS.bounds, 0.45);
+      gfx.strokeRect(blocker.x, blocker.y, blocker.width, blocker.height);
+    });
+
+    this.hazardZones.forEach(zone => {
+      gfx.fillStyle(COLORS.hazard, 0.12);
+      gfx.fillRect(zone.x, zone.y, zone.width, zone.height);
+      gfx.lineStyle(2, COLORS.hazard, 0.65);
+      gfx.strokeRect(zone.x, zone.y, zone.width, zone.height);
+    });
   }
 
   getVisualLift(x, y) { return 0; }
 }
-
