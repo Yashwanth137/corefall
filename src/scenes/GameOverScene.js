@@ -1,10 +1,6 @@
-/**
- * GameOverScene.js
- * Death screen with stats and restart option.
- */
-
 import * as Phaser from 'phaser';
 import gameState from '../managers/GameState.js';
+import Platform from '../utils/platform.js';
 
 export default class GameOverScene extends Phaser.Scene {
   constructor() {
@@ -13,6 +9,9 @@ export default class GameOverScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
+
+    // Submit score to Wavedash leaderboard
+    Platform.submitScore('high-scores', gameState.score);
 
     // Background
     this.add.rectangle(width / 2, height / 2, width, height, 0x0a0000);

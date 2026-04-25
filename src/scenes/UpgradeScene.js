@@ -1,9 +1,3 @@
-/**
- * UpgradeScene.js
- * Part selection screen shown between levels.
- * Offers 3 upgrade choices with visual cards.
- */
-
 import * as Phaser from 'phaser';
 import gameState from '../managers/GameState.js';
 import { getUpgradeChoices } from '../data/PartsData.js';

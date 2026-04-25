@@ -1,9 +1,3 @@
-/**
- * WaveSystem.js
- * Manages enemy wave spawning per level.
- * Tracks wave completion and signals level-complete.
- */
-
 import * as Phaser from 'phaser';
 import { getLevelConfig } from '../data/LevelConfig.js';
 import { getEnemyData } from '../data/EnemyData.js';

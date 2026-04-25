@@ -42,6 +42,10 @@ npm run dev
 npm run build
 ```
 
+## Deployment
+
+See [DEPLOY.md](DEPLOY.md) for deployment options and CI samples.
+
 ## License
 
 - Code is licensed under the MIT License. See `LICENSE`.

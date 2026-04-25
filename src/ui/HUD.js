@@ -13,7 +13,7 @@ export default class HUD {
     this.graphics = scene.add.graphics().setDepth(100).setScrollFactor(0);
 
     // Level text
-    this.levelText = scene.add.text(400, 12, '', {
+    this.levelText = scene.add.text(400, 42, '', {
       fontFamily: '"Orbitron", "Courier New", monospace',
       fontSize: '14px',
       color: '#8899bb',
@@ -21,7 +21,7 @@ export default class HUD {
     }).setOrigin(0.5, 0).setDepth(100).setScrollFactor(0);
 
     // Kill counter
-    this.killText = scene.add.text(780, 12, '', {
+    this.killText = scene.add.text(780, 42, '', {
       fontFamily: '"Orbitron", "Courier New", monospace',
       fontSize: '12px',
       color: '#667788',
@@ -29,7 +29,7 @@ export default class HUD {
     }).setOrigin(1, 0).setDepth(100).setScrollFactor(0);
 
     // Score
-    this.scoreText = scene.add.text(780, 28, '', {
+    this.scoreText = scene.add.text(780, 58, '', {
       fontFamily: '"Orbitron", "Courier New", monospace',
       fontSize: '12px',
       color: '#44ff88',
@@ -37,7 +37,7 @@ export default class HUD {
     }).setOrigin(1, 0).setDepth(100).setScrollFactor(0);
 
     // Wave indicator
-    this.waveText = scene.add.text(400, 30, '', {
+    this.waveText = scene.add.text(400, 60, '', {
       fontFamily: '"Orbitron", "Courier New", monospace',
       fontSize: '11px',
       color: '#556677',
@@ -78,7 +78,7 @@ export default class HUD {
     this.graphics.clear();
 
     // --- HP Bar ---
-    const hpX = 16, hpY = 16, hpW = 160, hpH = 14;
+    const hpX = 16, hpY = 46, hpW = 160, hpH = 14;
     const hpPercent = gameState.hp / gameState.maxHp;
 
     // HP border (Dark)
