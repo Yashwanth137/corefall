@@ -1,9 +1,3 @@
-/**
- * CombatSystem.js
- * Handles all weapon types: single, dual, shotgun, laser, missile, katana.
- * Manages bullet creation, lifetime, piercing, homing.
- */
-
 import * as Phaser from 'phaser';
 import gameState from '../managers/GameState.js';
 

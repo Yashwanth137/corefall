@@ -1,8 +1,3 @@
-/**
- * MovementSystem.js
- * Handles player WASD movement, aim toward mouse, dash mechanics.
- */
-
 import * as Phaser from 'phaser';
 import gameState from '../managers/GameState.js';
 

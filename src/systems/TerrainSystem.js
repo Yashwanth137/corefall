@@ -1,9 +1,3 @@
-/**
- * TerrainSystem.js
- * A minimal geometric rendering system replacing the organic terrain.
- * Focuses on Ketchapp-style sparse arena lines, boundaries, and subtle lanes.
- */
-
 import gameState from '../managers/GameState.js';
 
 const COLORS = {
@@ -30,8 +24,8 @@ export default class TerrainSystem {
   build(level) {
     const growth = Math.min(4, Math.floor((level - 1) / 2));
     this.bounds = {
-      w: 1200 + (growth * 200),
-      h: 1200 + (growth * 200)
+      w: 800 + (growth * 50),
+      h: 600 + (growth * 38)
     };
     this.navigationLines = [];
     this.lanes = [];

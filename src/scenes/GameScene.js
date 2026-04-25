@@ -1,9 +1,3 @@
-/**
- * GameScene.js
- * Core gameplay scene — SLIM orchestrator that delegates to systems.
- * Handles: player creation, physics groups, collision, rendering, game events.
- */
-
 import * as Phaser from 'phaser';
 import gameState from '../managers/GameState.js';
 import MovementSystem from '../systems/MovementSystem.js';
@@ -22,34 +16,26 @@ export default class GameScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
 
-    // --- Arena background ---
     const cfg = getLevelConfig(gameState.level);
     this.cameras.main.setBackgroundColor(cfg.arenaColor);
-    // Removed old background rectangle since ISO ground covers it and it messes up cartesian scrolling
 
-    // --- Terrain System ---
     this.terrainSystem = new TerrainSystem(this);
 
-    // --- Level announcement ---
     this.showLevelAnnouncement(cfg);
 
-    // --- Player ---
     const spawn = this.terrainSystem.spawnPoint || { x: width / 2, y: height / 2 };
     this.player = new Player(this, spawn.x, spawn.y);
     this.setupArenaBounds();
 
-    // --- Physics groups ---
     this.bullets = this.physics.add.group({ runChildUpdate: false });
     this.enemies = this.physics.add.group({ runChildUpdate: false });
     this.enemyBullets = this.physics.add.group({ runChildUpdate: false });
 
-    // --- Systems ---
     this.movementSystem = new MovementSystem(this, this.player);
     this.combatSystem = new CombatSystem(this, this.player, this.bullets, this.enemies);
     this.waveSystem = new WaveSystem(this, this.enemies, this.player);
     this.hud = new HUD(this);
 
-    // --- Graphics layer ---
     this.gfx = this.add.graphics().setDepth(10);
 
     // --- Regen timer ---
@@ -401,11 +387,17 @@ export default class GameScene extends Phaser.Scene {
     const bounds = this.terrainSystem.bounds;
     this.physics.world.setBounds(0, 0, bounds.w, bounds.h);
     
-    // Zoom out slightly for higher levels to see more
-    const zoom = Math.max(0.6, 1 - (gameState.level * 0.03));
+    // Fixed camera: zoom to fit the entire arena in the 800x600 viewport
+    const { width, height } = this.scale;
+    const zoomX = width / bounds.w;
+    const zoomY = height / bounds.h;
+    const zoom = Math.min(zoomX, zoomY);
+    
     this.cameras.main.setZoom(zoom);
     this.cameras.main.setBounds(0, 0, bounds.w, bounds.h);
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    
+    // Center the camera on the arena instead of following the player
+    this.cameras.main.centerOn(bounds.w / 2, bounds.h / 2);
   }
 
   renderAll(time, delta) {

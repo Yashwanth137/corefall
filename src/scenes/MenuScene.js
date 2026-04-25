@@ -1,8 +1,3 @@
-/**
- * MenuScene.js
- * Title screen with animated cyberpunk aesthetic.
- */
-
 import * as Phaser from 'phaser';
 import gameState from '../managers/GameState.js';
 

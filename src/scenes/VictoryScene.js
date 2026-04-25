@@ -1,11 +1,6 @@
-/**
- * VictoryScene.js
- * Win screen shown after completing Level 10 and defeating the Titan.
- * Shows the fully evolved cyborg with katana.
- */
-
 import * as Phaser from 'phaser';
 import gameState from '../managers/GameState.js';
+import Platform from '../utils/platform.js';
 
 export default class VictoryScene extends Phaser.Scene {
   constructor() {
@@ -14,6 +9,9 @@ export default class VictoryScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
+
+    // Submit score to Wavedash leaderboard
+    Platform.submitScore('high-scores', gameState.score);
 
     // Background
     this.add.rectangle(width / 2, height / 2, width, height, 0x000814);

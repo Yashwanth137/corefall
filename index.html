@@ -2,10 +2,17 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
+	<script>
+		if (!window.location.pathname.endsWith('/') && !window.location.pathname.endsWith('.html')) {
+			var base = document.createElement('base');
+			base.href = window.location.href + '/';
+			document.head.appendChild(base);
+		}
+	</script>
 	<title>Corefall — Cyborg Rebuild</title>
 	<meta name="description" content="A top-down shooter where you rebuild a damaged cyborg core through modular upgrades across 10 levels.">
 	<meta name="viewport" content="width=800, initial-scale=1.0">
-	<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+	<link rel="icon" href="./favicon.svg" type="image/svg+xml">
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
@@ -29,4 +36,4 @@
 <body>
 	<script type="module" src="src/main.js"></script>
 </body>
-</html>
+</html>
