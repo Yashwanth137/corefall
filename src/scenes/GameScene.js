@@ -87,7 +87,7 @@ export default class GameScene extends Phaser.Scene {
     });
 
     // Terrain collisions
-    this.terrainSystem.setupCollisions(this.player, this.enemies, this.bullets);
+    this.terrainSystem.setupCollisions(this.player, this.enemies, this.bullets, this.enemyBullets);
 
     // --- Game Events ---
     this.events.on('enemy-hit', (enemy, damage) => {
